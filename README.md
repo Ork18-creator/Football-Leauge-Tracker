@@ -47,8 +47,3 @@ browser-side CORS issues and keeps the API key out of frontend requests.
 - `src/index.css` loads Tailwind and app-wide styles.
 - `src/main.jsx` mounts the React app.
 
-## Ideas for next upgrades
-
-- Add all Premier League teams.
-- Connect to a football API for live standings and squad data.
-- Add club logos, fixtures, and a search box.
