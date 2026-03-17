@@ -116,6 +116,33 @@ npm.cmd run dev -- --host 127.0.0.1 --port 4173
 
 [http://127.0.0.1:4173](http://127.0.0.1:4173)
 
+## Auto Push Workflow
+
+If you want local changes in this project to auto-commit and auto-push to GitHub, run:
+
+```powershell
+npm.cmd run auto-push
+```
+
+What it does:
+
+- watches this repo for file changes
+- waits briefly for edits to settle
+- runs `git add -A`
+- creates an automatic commit
+- pushes to `origin/main`
+- logs each automatic push to `push-log.csv`
+
+Use this carefully. It is best for solo development because it will also push work-in-progress changes.
+
+The push log is Excel-friendly, so you can open [push-log.csv](C:/Users/omkes/Downloads/Leauge%20football%20details/push-log.csv) in Excel and track:
+
+- date
+- time
+- branch
+- commit hash
+- commit message
+
 ## Project Structure
 
 - `src/App.jsx` contains the main application UI and dashboard logic
