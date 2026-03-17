@@ -86,6 +86,21 @@ Current API-powered features include:
 
 The app uses a local proxy during development so the API key is not exposed directly in frontend requests.
 
+## Netlify Deployment
+
+For Netlify, add this environment variable in your site settings before deploying:
+
+```powershell
+FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
+```
+
+This project includes:
+
+- `netlify.toml` for build + redirect configuration
+- `netlify/functions/football-data.js` as a production proxy to `football-data.org`
+
+Without that Netlify environment variable, the deployed site will show fallback messages like `Add your API key...`.
+
 ## Local Setup
 
 1. Install dependencies
