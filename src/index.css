@@ -236,6 +236,15 @@ code {
   background-clip: padding-box;
 }
 
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .accent-analysis {
   color: var(--accent-analysis);
 }
@@ -270,4 +279,42 @@ code {
 .accent-badge-negative {
   background: var(--accent-negative-soft);
   color: #ffe4e6;
+}
+
+@media (max-width: 767px) {
+  body::before {
+    background-size: 22px 22px;
+    opacity: 0.45;
+  }
+
+  .app-header {
+    box-shadow:
+      0 12px 32px rgba(2, 10, 18, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .hero-panel,
+  .selector-panel,
+  .side-panel,
+  .summary-panel,
+  .form-guide-panel,
+  .match-card,
+  .chart-card,
+  .live-card,
+  .winners-table {
+    box-shadow:
+      0 10px 24px rgba(2, 10, 18, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .side-panel:hover,
+  .summary-panel:hover,
+  .match-card:hover,
+  .table-row:hover {
+    transform: none;
+  }
+
+  .display-heading {
+    letter-spacing: -0.025em;
+  }
 }

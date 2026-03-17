@@ -358,25 +358,26 @@ export default function App() {
   ]);
 
   return (
-    <div className="app-shell min-h-screen bg-[#06131d] px-4 py-5 text-slate-100 sm:px-6 lg:px-8">
+    <div className="app-shell min-h-screen bg-[#06131d] px-3 py-4 text-slate-100 sm:px-5 sm:py-5 lg:px-8">
       <div className="w-full">
-        <header className="app-header sticky top-4 z-30 mb-4 rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(3,9,16,0.82),rgba(5,14,24,0.78))] backdrop-blur-xl">
-          <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-3 sm:px-6">
+        <header className="app-header sticky top-3 z-30 mb-3 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(3,9,16,0.82),rgba(5,14,24,0.78))] backdrop-blur-xl sm:top-4 sm:mb-4 sm:rounded-[28px]">
+          <div className="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-3.5 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <div className="text-[1.75rem] font-extrabold tracking-[0.015em] text-emerald-400 drop-shadow-[0_0_18px_rgba(16,185,129,0.18)]">
+              <div className="text-[1.25rem] font-extrabold tracking-[0.01em] text-emerald-400 drop-shadow-[0_0_18px_rgba(16,185,129,0.18)] sm:text-[1.75rem]">
                 Football League Tracker
               </div>
-              <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500 sm:text-[11px] sm:tracking-[0.24em]">
                 Realtime Analysis
               </p>
             </div>
-            <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
-              {competitions.map((item) => (
+            <nav className="w-full lg:w-auto">
+              <div className="grid grid-cols-2 gap-2 text-sm text-slate-400 sm:grid-cols-3 lg:flex lg:min-w-max lg:items-center">
+                {competitions.map((item) => (
                 <button
                   key={item.code}
                   type="button"
                   onClick={() => setSelectedCompetitionCode(item.code)}
-                  className={`rounded-full px-3.5 py-2 text-sm font-semibold transition ${
+                  className={`w-full rounded-full px-3 py-2 text-sm font-semibold transition sm:px-3.5 lg:w-auto ${
                     item.code === competition.code
                       ? "border border-cyan-300/30 bg-cyan-300/12 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.06),0_8px_24px_rgba(8,145,178,0.16)]"
                       : "border border-white/0 text-slate-400 hover:border-white/10 hover:bg-white/[0.05] hover:text-white"
@@ -384,27 +385,28 @@ export default function App() {
                 >
                   {item.name}
                 </button>
-              ))}
+                ))}
+              </div>
             </nav>
           </div>
         </header>
 
-        <div className="app-frame relative rounded-[36px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,20,31,0.96),rgba(12,28,42,0.92))] p-4 shadow-[0_30px_120px_rgba(2,10,18,0.55)] before:pointer-events-none before:absolute before:inset-0 before:rounded-[36px] before:border before:border-white/[0.03] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_38%)] sm:p-6 lg:p-8">
+        <div className="app-frame relative rounded-[28px] border border-white/10 bg-[linear-gradient(145deg,rgba(9,20,31,0.96),rgba(12,28,42,0.92))] p-3 shadow-[0_30px_120px_rgba(2,10,18,0.55)] before:pointer-events-none before:absolute before:inset-0 before:rounded-[28px] before:border before:border-white/[0.03] before:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.05),transparent_38%)] sm:rounded-[36px] sm:p-5 lg:p-8">
           {isSwitchingClub ? (
             <ClubSwitchOverlay clubName={switchingTeam?.name ?? selectedTeam.name} />
           ) : null}
           <div>
-          <section className="hero-panel rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:p-5">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(300px,400px)] md:items-center">
+          <section className="hero-panel rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[28px] sm:p-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-center">
               <div>
-                <p className="accent-analysis text-base font-semibold uppercase tracking-[0.26em] sm:text-lg">
+                <p className="accent-analysis text-sm font-semibold uppercase tracking-[0.22em] sm:text-base sm:tracking-[0.26em] lg:text-lg">
                   Live football dashboard
                 </p>
-                <p className="mt-1.5 max-w-[520px] text-sm text-slate-400">
+                <p className="mt-1.5 max-w-[520px] text-sm leading-6 text-slate-400">
                   Select your favourite club and see some interesting insights.
                 </p>
               </div>
-              <div className="selector-panel rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,12,0.46),rgba(15,23,42,0.44))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <div className="selector-panel rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,12,0.46),rgba(15,23,42,0.44))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[24px] sm:p-3.5">
                 <label
                   htmlFor="team-select"
                   className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400"
@@ -429,13 +431,13 @@ export default function App() {
           <main className={`mt-4 grid items-stretch gap-4 ${isLeagueCompetition ? "xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.75fr)]" : ""}`}>
             {isLeagueCompetition ? (
               <div className="flex h-full min-h-full flex-col gap-4">
-                <section className="side-panel rounded-[26px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
-                  <div className="flex items-center justify-between">
+                <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                         League table
                       </p>
-                      <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                      <h3 className="display-heading mt-3 text-[1.75rem] leading-none text-white sm:text-3xl">
                         {competition.name}
                       </h3>
                       {standingsUpdatedAt ? (
@@ -444,9 +446,11 @@ export default function App() {
                         </p>
                       ) : null}
                     </div>
-                    <PremierLeagueTrophyArt />
+                    <div className="hidden sm:block">
+                      <PremierLeagueTrophyArt />
+                    </div>
                   </div>
-                  <div className="mt-4 max-h-[700px] overflow-y-auto pr-1">
+                  <div className="mt-4 max-h-[520px] overflow-y-auto pr-1 sm:max-h-[700px]">
                     {!apiReady ? (
                       <EmptyMessage>Add your API key to view the live table.</EmptyMessage>
                     ) : isLoadingStandings ? (
@@ -463,11 +467,11 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="side-panel rounded-[26px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                     Title race
                   </p>
-                  <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                  <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                     Top 4 comparison
                   </h3>
                   {standingsUpdatedAt ? (
@@ -492,11 +496,11 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="side-panel rounded-[26px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                     League scoring
                   </p>
-                  <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                  <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                     Current Top Scorers
                   </h3>
                   {scorersUpdatedAt ? (
@@ -521,11 +525,11 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="side-panel rounded-[26px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                     Club scoring
                   </p>
-                  <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                  <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                     Most Goals
                   </h3>
                   <div className="mt-4">
@@ -541,11 +545,11 @@ export default function App() {
                   </div>
                 </section>
 
-                <section className="side-panel rounded-[28px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[28px] sm:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                     Club defending
                   </p>
-                  <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                  <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                     Most Clean Sheets
                   </h3>
                   <div className="mt-4">
@@ -560,11 +564,11 @@ export default function App() {
                 </section>
 
                 {showRecentWinners ? (
-                  <section className="side-panel rounded-[26px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                  <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                       Recent champions
                     </p>
-                    <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                    <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                       {competition.code === "PD"
                         ? "Last 3 LaLiga Winners"
                         : competition.code === "SA"
@@ -583,18 +587,18 @@ export default function App() {
 
             <div className="flex min-h-full flex-col gap-4">
               <div>
-                <section className="summary-panel relative overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.045] p-4 sm:p-5">
+                <section className="summary-panel relative overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[28px] sm:p-5">
                   <TeamBackdrop
                     name={selectedTeam.name}
                     logoUrl={selectedStanding?.team?.crest}
                   />
                   <div className="relative z-10">
-                  <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(280px,0.72fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)]">
+                  <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.72fr)]">
                     <div>
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3 sm:gap-4">
                         <ClubLogo name={selectedTeam.name} logoUrl={selectedStanding?.team?.crest} size="hero" />
                         <div>
-                          <h2 className="display-heading text-4xl leading-none text-white sm:text-5xl">
+                          <h2 className="display-heading text-[2.4rem] leading-none text-white sm:text-5xl">
                             {selectedTeam.name}
                           </h2>
                           <p className="mt-3 text-sm text-slate-400">
@@ -602,7 +606,7 @@ export default function App() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                      <div className="mt-5 grid gap-3 grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                         <Metric label="Manager" value={selectedTeam.manager ?? "NA"} />
                         <Metric label="Stadium" value={selectedTeam.stadium ?? "NA"} />
                         <Metric label="Current rank" value={selectedStanding ? `#${selectedStanding.position}` : "NA"} />
@@ -613,7 +617,7 @@ export default function App() {
                         <Metric label="AVG Goals Conceded" value={averageGoalsConceded} />
                       </div>
                     </div>
-                    <div className="form-guide-panel rounded-[28px] border border-white/10 bg-slate-950/40 p-5">
+                    <div className="form-guide-panel rounded-[24px] border border-white/10 bg-slate-950/40 p-4 sm:rounded-[28px] sm:p-5">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400">
                         Form guide
                       </p>
@@ -654,7 +658,7 @@ export default function App() {
                         <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
                           Live match
                         </p>
-                        <h3 className="display-heading mt-3 text-3xl leading-none text-white">
+                        <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
                           Current action
                         </h3>
                       </div>
@@ -2212,6 +2216,7 @@ function ClubLogo({ name, logoUrl, size = "md" }) {
     hero: "h-20 w-20 rounded-[26px] p-4 sm:h-24 sm:w-24",
     md: "h-14 w-14 rounded-2xl p-3",
     table: "h-11 w-11 rounded-2xl p-2",
+    "table-mobile": "h-8 w-8 rounded-xl p-1.5 sm:h-11 sm:w-11 sm:rounded-2xl sm:p-2",
   };
   const label = name.split(" ").slice(0, 3).map((part) => part[0]).join("").toUpperCase();
   return logoUrl ? (
@@ -2453,8 +2458,8 @@ function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
   return (
     <div className="overflow-hidden rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(8,15,26,0.86),rgba(7,12,20,0.72))]">
       <div className="overflow-x-auto">
-        <div className="min-w-[360px]">
-          <div className="grid grid-cols-[44px_minmax(0,1fr)_56px_56px] items-center gap-3 border-b border-white/8 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+        <div className="min-w-[300px] sm:min-w-[360px]">
+          <div className="grid grid-cols-[28px_minmax(0,1fr)_42px_42px] items-center gap-2 border-b border-white/8 px-3 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:grid-cols-[44px_minmax(0,1fr)_56px_56px] sm:gap-3 sm:px-4 sm:text-[10px] sm:tracking-[0.22em]">
             <span className="text-center">Pos</span>
             <span>Club</span>
             <span className="text-center">MP</span>
@@ -2471,7 +2476,7 @@ function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
                   key={entry.team.id}
                   type="button"
                   onClick={() => onSelectTeam(String(entry.team.id))}
-                  className={`group relative grid w-full grid-cols-[44px_minmax(0,1fr)_56px_56px] items-center gap-3 px-4 py-3 text-left transition ${
+                  className={`group relative grid w-full grid-cols-[28px_minmax(0,1fr)_42px_42px] items-center gap-2 px-3 py-3 text-left transition sm:grid-cols-[44px_minmax(0,1fr)_56px_56px] sm:gap-3 sm:px-4 ${
                     isSelected
                       ? "bg-[linear-gradient(90deg,rgba(148,163,184,0.24),rgba(148,163,184,0.12))]"
                       : isLeader
@@ -2489,26 +2494,26 @@ function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
                     }`}
                   />
 
-                  <div className={`text-center text-sm font-semibold ${isLeader ? "text-amber-100" : "text-slate-200"}`}>
+                  <div className={`text-center text-[11px] font-semibold sm:text-sm ${isLeader ? "text-amber-100" : "text-slate-200"}`}>
                     {entry.position}
                   </div>
 
-                  <div className="flex min-w-0 items-center gap-3 pr-2">
-                    <ClubLogo name={teamName} logoUrl={entry.team.crest} size="xs" />
-                    <div className="flex min-w-0 items-center gap-2">
-                      <p className={`truncate text-sm font-semibold ${isLeader ? "text-amber-50" : "text-white"}`}>{teamName}</p>
+                  <div className="flex min-w-0 items-center gap-2 sm:gap-3 sm:pr-2">
+                    <ClubLogo name={teamName} logoUrl={entry.team.crest} size="table-mobile" />
+                    <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
+                      <p className={`min-w-0 text-[12px] font-semibold leading-tight text-white sm:text-sm ${isLeader ? "text-amber-50" : "text-white"} ${teamName.length > 11 ? "break-words" : "truncate"}`}>{teamName}</p>
                       {isLeader ? (
-                        <span className="shrink-0 rounded-full bg-amber-300/14 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-100 ring-1 ring-amber-200/16">
+                        <span className="hidden shrink-0 rounded-full bg-amber-300/14 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-100 ring-1 ring-amber-200/16 sm:inline-flex">
                           Leader
                         </span>
                       ) : null}
                     </div>
                   </div>
 
-                  <div className={`text-center text-sm font-medium ${isLeader ? "text-amber-100/90" : "text-slate-300"}`}>
+                  <div className={`text-center text-[11px] font-medium sm:text-sm ${isLeader ? "text-amber-100/90" : "text-slate-300"}`}>
                     {entry.playedGames}
                   </div>
-                  <div className={`text-center text-base font-semibold ${isLeader ? "text-amber-50" : "text-white"}`}>
+                  <div className={`text-center text-[13px] font-semibold sm:text-base ${isLeader ? "text-amber-50" : "text-white"}`}>
                     {entry.points}
                   </div>
                 </button>
@@ -2600,7 +2605,7 @@ function TitleRaceComparisonChart({ standings, matches, selectedTeamId }) {
 
   return (
     <div className="chart-card rounded-[20px] border border-white/8 bg-slate-950/30 p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
           Points by matchweek
         </p>
@@ -2609,14 +2614,14 @@ function TitleRaceComparisonChart({ standings, matches, selectedTeamId }) {
         </p>
       </div>
 
-      <div className="mt-4 grid grid-cols-[28px_minmax(0,1fr)] gap-3">
+      <div className="mt-4 grid grid-cols-[22px_minmax(0,1fr)] gap-2 sm:grid-cols-[28px_minmax(0,1fr)] sm:gap-3">
         <div className="flex h-44 flex-col justify-between py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
           {[maxPoints, Math.round(maxPoints * 0.66), Math.round(maxPoints * 0.33), 0].map((value) => (
             <span key={value}>{value}</span>
           ))}
         </div>
         <div>
-          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-44 w-full overflow-visible">
+          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="h-36 w-full overflow-visible sm:h-44">
             {[0, 0.33, 0.66, 1].map((ratio) => {
               const y = chartHeight - 12 - ratio * (chartHeight - 24);
               return (
@@ -2664,7 +2669,7 @@ function TitleRaceComparisonChart({ standings, matches, selectedTeamId }) {
               return (
                 <div
                   key={team.id}
-                  className={`flex items-center gap-2 rounded-full border px-3 py-1.5 ${
+                    className={`flex items-center gap-2 rounded-full border px-2.5 py-1.5 sm:px-3 ${
                     isSelected ? "border-cyan-300/25 bg-cyan-400/10" : "border-white/8 bg-white/[0.03]"
                   }`}
                 >
@@ -2795,7 +2800,7 @@ function CompactLiveMatch({ match, selectedTeam, crestMap }) {
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_80px_minmax(0,1fr)] items-center gap-3">
+      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_80px_minmax(0,1fr)] sm:items-center sm:gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <ClubLogo name={simplifyName(match.homeTeam.name)} logoUrl={homeLogo} size="sm" />
           <div className="min-w-0">
@@ -2808,7 +2813,7 @@ function CompactLiveMatch({ match, selectedTeam, crestMap }) {
           </div>
         </div>
 
-        <div className="text-center">
+        <div className="text-center sm:text-center">
           <p className="text-2xl font-semibold text-white">
             {match.score.fullTime.home ?? 0}-{match.score.fullTime.away ?? 0}
           </p>
@@ -2817,7 +2822,7 @@ function CompactLiveMatch({ match, selectedTeam, crestMap }) {
           </p>
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-3 text-right">
+        <div className="flex min-w-0 items-center gap-3 text-left sm:justify-end sm:text-right">
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-white">
               {simplifyName(match.awayTeam.name)}
@@ -2862,7 +2867,7 @@ function TopScorerCard({ scorers, competitionName, crestMap }) {
 
   return (
     <div className="rounded-[22px] border border-white/8 bg-slate-950/30">
-      <div className="grid grid-cols-[40px_minmax(0,1fr)_64px] gap-3 border-b border-white/8 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_52px] gap-2 border-b border-white/8 px-3 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4 sm:text-[10px] sm:tracking-[0.2em]">
         <span>#</span>
         <span>Player</span>
         <span className="text-right">Goals</span>
@@ -2880,17 +2885,17 @@ function TopScorerCard({ scorers, competitionName, crestMap }) {
           return (
             <div
               key={`${playerName}-${teamName}-${index}`}
-              className="grid grid-cols-[40px_minmax(0,1fr)_64px] items-center gap-3 px-4 py-3"
+              className="grid grid-cols-[28px_minmax(0,1fr)_52px] items-center gap-2 px-3 py-3 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4"
             >
-              <span className="text-sm font-semibold text-slate-300">{index + 1}</span>
+              <span className="text-xs font-semibold text-slate-300 sm:text-sm">{index + 1}</span>
               <div className="flex min-w-0 items-center gap-3">
                 <ClubLogo name={teamName} logoUrl={logoUrl} size="xs" />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white">{playerName}</p>
+                  <p className="truncate text-[13px] font-semibold text-white sm:text-sm">{playerName}</p>
                   <p className="truncate text-xs text-slate-400">{teamName}</p>
                 </div>
               </div>
-              <span className="text-right text-lg font-semibold text-white">{goals}</span>
+              <span className="text-right text-base font-semibold text-white sm:text-lg">{goals}</span>
             </div>
           );
         })}
@@ -2916,7 +2921,7 @@ function TopScoringClubsCard({ standings, crestMap }) {
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-white/8 bg-slate-950/30">
-      <div className="grid grid-cols-[40px_minmax(0,1fr)_64px] gap-3 border-b border-white/8 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_52px] gap-2 border-b border-white/8 px-3 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4 sm:text-[10px] sm:tracking-[0.2em]">
         <span>#</span>
         <span>Club</span>
         <span className="text-right">Goals</span>
@@ -2932,14 +2937,14 @@ function TopScoringClubsCard({ standings, crestMap }) {
           return (
             <div
               key={entry.team.id}
-              className="grid grid-cols-[40px_minmax(0,1fr)_64px] items-center gap-3 px-4 py-3"
+              className="grid grid-cols-[28px_minmax(0,1fr)_52px] items-center gap-2 px-3 py-3 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4"
             >
-              <span className="text-sm font-semibold text-slate-300">{index + 1}</span>
+              <span className="text-xs font-semibold text-slate-300 sm:text-sm">{index + 1}</span>
               <div className="flex min-w-0 items-center gap-3">
                 <ClubLogo name={teamName} logoUrl={logoUrl} size="xs" />
-                <p className="truncate text-sm font-semibold text-white">{teamName}</p>
+                <p className="truncate text-[13px] font-semibold text-white sm:text-sm">{teamName}</p>
               </div>
-              <span className="text-right text-lg font-semibold text-white">
+              <span className="text-right text-base font-semibold text-white sm:text-lg">
                 {entry.goalsFor ?? 0}
               </span>
             </div>
@@ -3007,7 +3012,7 @@ function TopCleanSheetsCard({ matches, crestMap }) {
 
   return (
     <div className="overflow-hidden rounded-[22px] border border-white/8 bg-slate-950/30">
-      <div className="grid grid-cols-[40px_minmax(0,1fr)_64px] gap-3 border-b border-white/8 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+      <div className="grid grid-cols-[28px_minmax(0,1fr)_52px] gap-2 border-b border-white/8 px-3 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4 sm:text-[10px] sm:tracking-[0.2em]">
         <span>#</span>
         <span>Club</span>
         <span className="text-right">CS</span>
@@ -3016,14 +3021,14 @@ function TopCleanSheetsCard({ matches, crestMap }) {
         {clubs.map((club, index) => (
           <div
             key={club.id}
-            className="grid grid-cols-[40px_minmax(0,1fr)_64px] items-center gap-3 px-4 py-3"
+            className="grid grid-cols-[28px_minmax(0,1fr)_52px] items-center gap-2 px-3 py-3 sm:grid-cols-[40px_minmax(0,1fr)_64px] sm:gap-3 sm:px-4"
           >
-            <span className="text-sm font-semibold text-slate-300">{index + 1}</span>
+            <span className="text-xs font-semibold text-slate-300 sm:text-sm">{index + 1}</span>
             <div className="flex min-w-0 items-center gap-3">
               <ClubLogo name={club.name} logoUrl={club.logoUrl} size="xs" />
-              <p className="truncate text-sm font-semibold text-white">{club.name}</p>
+              <p className="truncate text-[13px] font-semibold text-white sm:text-sm">{club.name}</p>
             </div>
-            <span className="text-right text-lg font-semibold text-white">
+            <span className="text-right text-base font-semibold text-white sm:text-lg">
               {club.cleanSheets}
             </span>
           </div>
@@ -3060,7 +3065,7 @@ function LastMatchResultCard({ match, selectedTeam, crestMap }) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {formatKickoff(match.utcDate)}
           </p>
-          <div className="mt-3 flex items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3">
             <ClubLogo name={selectedTeam.name} logoUrl={teamLogo} size="sm" />
             <div className="text-center text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
               vs
@@ -3113,9 +3118,9 @@ function SkeletonPanel({ rows = 3 }) {
 
 function InfoCard({ title, children, divided = false, updatedAt = null }) {
   return (
-    <section className={`info-card rounded-[30px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_20px_50px_rgba(2,10,18,0.14)] sm:p-5 ${divided ? "relative before:absolute before:left-5 before:right-5 before:top-0 before:h-px before:bg-white/[0.06]" : ""}`}>
+    <section className={`info-card rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_20px_50px_rgba(2,10,18,0.14)] sm:rounded-[30px] sm:p-5 ${divided ? "relative before:absolute before:left-5 before:right-5 before:top-0 before:h-px before:bg-white/[0.06]" : ""}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h3 className="display-heading text-3xl leading-none text-white">{title}</h3>
+        <h3 className="display-heading text-[2rem] leading-none text-white sm:text-3xl">{title}</h3>
         {updatedAt ? (
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
             Updated {formatUpdatedAt(updatedAt)}
