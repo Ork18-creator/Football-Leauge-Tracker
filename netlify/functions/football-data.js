@@ -1,5 +1,27 @@
 const API_ORIGIN = "https://api.football-data.org";
 
+function extractPath(event) {
+  const directSplat = event.pathParameters?.splat;
+  if (directSplat) {
+    return directSplat;
+  }
+
+  const candidates = [event.path, event.rawUrl];
+
+  for (const candidate of candidates) {
+    if (!candidate) {
+      continue;
+    }
+
+    const match = candidate.match(/\/football-data\/(.+)$/u);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  return "";
+}
+
 function buildUpstreamUrl(path, queryStringParameters) {
   const cleanPath = Array.isArray(path) ? path.join("/") : path;
   const url = new URL(cleanPath, `${API_ORIGIN}/`);
@@ -32,7 +54,7 @@ export async function handler(event) {
     };
   }
 
-  const splat = event.pathParameters?.splat ?? "";
+  const splat = extractPath(event);
   const upstreamUrl = buildUpstreamUrl(splat, event.queryStringParameters);
 
   try {
@@ -66,4 +88,3 @@ export async function handler(event) {
     };
   }
 }
-
