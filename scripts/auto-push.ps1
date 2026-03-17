@@ -63,22 +63,6 @@ function Add-PushLogEntry {
   $entry | Export-Csv -Path $pushLogPath -NoTypeInformation -Append
 }
 
-function Update-LatestPushLogCommit {
-  param([string]$CommitHash)
-
-  if (-not (Test-Path $pushLogPath)) {
-    return
-  }
-
-  $rows = Import-Csv -Path $pushLogPath
-  if (-not $rows -or $rows.Count -eq 0) {
-    return
-  }
-
-  $rows[-1].Commit = $CommitHash
-  $rows | Export-Csv -Path $pushLogPath -NoTypeInformation
-}
-
 function Publish-Changes {
   $changes = Get-WorktreeChanges
   if ($changes.Count -eq 0) {
@@ -99,15 +83,9 @@ function Publish-Changes {
 
   try {
     Invoke-Git -GitArgs @("commit", "-m", $message) | Out-Null
-    $commitHash = (& $gitPath -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1).Trim()
-    Add-PushLogEntry -BranchName $Branch -CommitHash $commitHash -CommitMessage $message
-    Invoke-Git -GitArgs @("add", "push-log.csv") | Out-Null
-    Invoke-Git -GitArgs @("commit", "--amend", "--no-edit") | Out-Null
-    $finalCommitHash = (& $gitPath -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1).Trim()
-    Update-LatestPushLogCommit -CommitHash $finalCommitHash
-    Invoke-Git -GitArgs @("add", "push-log.csv") | Out-Null
-    Invoke-Git -GitArgs @("commit", "--amend", "--no-edit") | Out-Null
     Invoke-Git -GitArgs @("push", "origin", $Branch) | Out-Null
+    $finalCommitHash = (& $gitPath -C $repoRoot rev-parse --short HEAD 2>$null | Select-Object -First 1).Trim()
+    Add-PushLogEntry -BranchName $Branch -CommitHash $finalCommitHash -CommitMessage $message
     Write-Host "Pushed changes at $timestamp"
   } catch {
     Write-Warning "Auto-push failed: $($_.Exception.Message)"
@@ -128,7 +106,8 @@ $watcher.NotifyFilter = [System.IO.NotifyFilters]'FileName, LastWrite, Directory
 $ignoredPathFragments = @(
   "\.git\",
   "\node_modules\",
-  "\dist\"
+  "\dist\",
+  "\push-log.csv"
 )
 
 $script:lastChangeAt = Get-Date

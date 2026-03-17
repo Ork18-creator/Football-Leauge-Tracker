@@ -135,13 +135,15 @@ What it does:
 
 Use this carefully. It is best for solo development because it will also push work-in-progress changes.
 
-The push log is Excel-friendly, so you can open [push-log.csv](C:/Users/omkes/Downloads/Leauge%20football%20details/push-log.csv) in Excel and track:
+The push log is Excel-friendly, so you can open `push-log.csv` in Excel and track:
 
 - date
 - time
 - branch
 - commit hash
 - commit message
+
+`push-log.csv` stays local on your machine so it can store the final pushed commit hash accurately.
 
 ## Project Structure
 
