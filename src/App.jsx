@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { teams } from "./data/teams";
 import {
   getCompetitionMatches,
@@ -38,6 +38,7 @@ const bundesligaRecentWinners = [
   { season: "2023/24", club: "Bayer Leverkusen" },
   { season: "2022/23", club: "Bayern Munich" },
 ];
+const LIVE_MATCH_STATUSES = new Set(["IN_PLAY", "PAUSED", "LIVE", "SUSPENDED"]);
 
 export default function App() {
   const [selectedCompetitionCode, setSelectedCompetitionCode] = useState("PL");
@@ -65,29 +66,27 @@ export default function App() {
     competitions[0];
   const isLeagueCompetition = ["PL", "PD", "SA", "BL1"].includes(competition.code);
   const plStandings = standingsByCompetition.PL ?? [];
+  const championsLeagueStandings = standingsByCompetition.CL ?? [];
   const currentStandings = standingsByCompetition[competition.code] ?? [];
   const competitionMatches = competitionMatchesByCode[competition.code] ?? [];
+  const championsLeagueMatches = competitionMatchesByCode.CL ?? [];
   const standingsUpdatedAt = standingsUpdatedAtByCompetition[competition.code] ?? null;
   const scorersUpdatedAt = scorersUpdatedAtByCompetition[competition.code] ?? null;
   const competitionScorers = scorersByCompetition[competition.code] ?? [];
   const selectedLocalTeam = teams.find((team) => String(team.id) === String(selectedTeamId)) ?? null;
-  const championsLeagueTeams = (() => {
-    const knockoutTeams = buildRoundOf16TeamList(competitionMatches);
-    const fallbackStandings = currentStandings;
-    const source = knockoutTeams.length > 0 ? knockoutTeams : fallbackStandings;
-
-    return source.filter(
-      (entry) =>
-        !championsLeagueExcludedTeams.has(
-          simplifyName(entry.team.shortName || entry.team.name),
-        ),
-    );
-  })();
-  const availableTeams = buildTeamOptions(
-    competition.code === "PL" ? teams : [],
-    competition.code === "CL"
-      ? championsLeagueTeams
-      : currentStandings,
+  const championsLeagueTeams = useMemo(
+    () => buildActiveChampionsLeagueTeams(championsLeagueMatches, championsLeagueStandings),
+    [championsLeagueMatches, championsLeagueStandings],
+  );
+  const availableTeams = useMemo(
+    () =>
+      buildTeamOptions(
+        competition.code === "PL" ? teams : [],
+        competition.code === "CL"
+          ? championsLeagueTeams
+          : currentStandings,
+      ),
+    [competition.code, championsLeagueTeams, currentStandings],
   );
   const selectedStanding =
     findStanding(currentStandings, selectedTeamId) ??
@@ -106,6 +105,10 @@ export default function App() {
     teams.find((team) => String(team.id) === String(switchingTeamId)) ??
     availableTeams.find((team) => String(team.id) === String(switchingTeamId)) ??
     null;
+  const activeChampionsLeagueTeamKeys = useMemo(
+    () => buildActiveChampionsLeagueTeamKeys(championsLeagueMatches, championsLeagueStandings),
+    [championsLeagueMatches, championsLeagueStandings],
+  );
   const selectedMatches = selectedStanding
     ? matchesByTeamId[selectedStanding.team.id] ?? []
     : [];
@@ -127,20 +130,33 @@ export default function App() {
     )
     .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
     .slice(0, competition.code === "CL" ? 1 : 5);
-  const primaryUpcomingMatch = upcomingMatches[0] ?? null;
-  const upcomingSectionTitle =
-    primaryUpcomingMatch && ["IN_PLAY", "PAUSED", "LIVE"].includes(primaryUpcomingMatch.status)
-      ? "Currently Live"
-      : "Upcoming Match";
+  const liveMatchFromCompetition =
+    competitionMatches.find(
+      (match) =>
+        match.competition?.code === competition.code &&
+        LIVE_MATCH_STATUSES.has(match.status) &&
+        isMatchForSelectedTeam(match, selectedTeam),
+    ) ?? null;
   const liveMatch =
     selectedMatches.find(
       (match) =>
         match.competition?.code === competition.code &&
-        ["IN_PLAY", "PAUSED", "LIVE"].includes(match.status),
-    ) ?? null;
+        LIVE_MATCH_STATUSES.has(match.status),
+    ) ??
+    liveMatchFromCompetition ??
+    null;
+  const primaryUpcomingMatch = upcomingMatches[0] ?? null;
+  const upcomingSectionTitle =
+    liveMatch || (primaryUpcomingMatch && LIVE_MATCH_STATUSES.has(primaryUpcomingMatch.status))
+      ? "Currently Live"
+      : "Upcoming Match";
   const cleanSheets = countCleanSheets(selectedMatches, selectedTeam, competition.code);
   const averageGoals = calculateAverageGoals(selectedStanding);
   const averageGoalsConceded = calculateAverageGoalsConceded(selectedStanding);
+  const currentChampionsLeagueRound =
+    competition.code === "CL"
+      ? resolveChampionsLeagueRoundLabel(selectedMatches, competitionMatches)
+      : null;
   const formResults = buildFormResults(selectedStanding?.form, recentMatches, selectedTeam);
   const formMomentum = buildFormMomentum(recentMatches, selectedTeam);
   const positionStreak = buildPositionStreak(
@@ -243,6 +259,45 @@ export default function App() {
   }, [apiReady, competition.code, competitionMatchesByCode]);
 
   useEffect(() => {
+    if (!apiReady || competitionMatchesByCode.CL) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const matches = await getCompetitionMatches("CL", controller.signal);
+        setCompetitionMatchesByCode((current) => ({
+          ...current,
+          CL: matches,
+        }));
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          return;
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [apiReady, competitionMatchesByCode]);
+
+  useEffect(() => {
+    if (!apiReady || standingsByCompetition.CL) {
+      return undefined;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const table = await getCompetitionStandings("CL", controller.signal);
+        setStandingsByCompetition((current) => ({ ...current, CL: table }));
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          return;
+        }
+      }
+    })();
+    return () => controller.abort();
+  }, [apiReady, standingsByCompetition]);
+
+  useEffect(() => {
     if (!apiReady || scorersByCompetition[competition.code]) {
       return undefined;
     }
@@ -304,6 +359,7 @@ export default function App() {
     })();
     return () => controller.abort();
   }, [apiReady, matchesByTeamId, selectedStanding?.team?.id]);
+
 
   useEffect(() => {
     if (!apiReady || !selectedStanding?.team?.id || teamDetailsById[selectedStanding.team.id]) {
@@ -396,8 +452,8 @@ export default function App() {
             <ClubSwitchOverlay clubName={switchingTeam?.name ?? selectedTeam.name} />
           ) : null}
           <div>
-          <section className="hero-panel rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[28px] sm:p-5">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-center">
+          <section className="hero-panel relative z-20 rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[28px] sm:p-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,380px)] lg:items-start">
               <div>
                 <p className="accent-analysis text-sm font-semibold uppercase tracking-[0.22em] sm:text-base sm:tracking-[0.26em] lg:text-lg">
                   Live football dashboard
@@ -406,7 +462,7 @@ export default function App() {
                   Select your favourite club and see some interesting insights.
                 </p>
               </div>
-              <div className="selector-panel rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,12,0.46),rgba(15,23,42,0.44))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[24px] sm:p-3.5">
+              <div className="selector-panel relative rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(2,6,12,0.46),rgba(15,23,42,0.44))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] sm:rounded-[24px] sm:p-3.5">
                 <label
                   htmlFor="team-select"
                   className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-400"
@@ -417,10 +473,10 @@ export default function App() {
                   id="team-select"
                   value={selectedTeamId}
                   onChange={(event) => handleSelectTeam(event.target.value)}
-                  className="mt-2.5 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] outline-none transition focus:border-cyan-300/30 focus:bg-white/[0.08]"
+                  className="mt-2.5 w-full rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-[15px] font-medium text-white outline-none transition focus:border-cyan-300/30 focus:bg-white/[0.08]"
                 >
                   {availableTeams.map((team) => (
-                    <option key={team.id} value={team.id} className="bg-slate-900">
+                    <option key={team.id} value={team.id} className="bg-slate-950 text-white">
                       {team.name}
                     </option>
                   ))}
@@ -428,7 +484,7 @@ export default function App() {
               </div>
             </div>
           </section>
-          <main className={`mt-4 grid items-stretch gap-4 ${isLeagueCompetition ? "xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.75fr)]" : ""}`}>
+          <main className={`relative z-0 mt-4 grid items-stretch gap-4 ${isLeagueCompetition ? "xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.6fr)] 2xl:grid-cols-[minmax(340px,0.85fr)_minmax(0,1.75fr)]" : ""}`}>
             {isLeagueCompetition ? (
               <div className="flex h-full min-h-full flex-col gap-4">
                 <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
@@ -462,6 +518,7 @@ export default function App() {
                         standings={currentStandings}
                         selectedTeamId={selectedTeamId}
                         onSelectTeam={handleSelectTeam}
+                        activeChampionsLeagueTeamKeys={activeChampionsLeagueTeamKeys}
                       />
                     )}
                   </div>
@@ -633,6 +690,9 @@ export default function App() {
                             <Metric label="Played" value={selectedStanding.playedGames} />
                             <Metric label="Goal diff" value={selectedStanding.goalDifference} />
                           </div>
+                          {competition.code === "CL" ? (
+                            <Metric label="Current round" value={currentChampionsLeagueRound ?? "NA"} />
+                          ) : null}
                           <MomentumMetric momentum={formMomentum} compact />
                           <div className="flex flex-wrap gap-2">
                             {(formResults.length > 0 ? formResults : ["NA"]).map((result, index) => (
@@ -864,6 +924,25 @@ function buildTeamOptions(localTeams, standings) {
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function isMatchForSelectedTeam(match, selectedTeam) {
+  if (!match || !selectedTeam) {
+    return false;
+  }
+
+  const candidateNames = [
+    selectedTeam.apiTeamName,
+    selectedTeam.name,
+    simplifyName(selectedTeam.apiTeamName),
+    simplifyName(selectedTeam.name),
+  ]
+    .filter(Boolean)
+    .map((name) => normalizeTeamKey(name));
+
+  return [match.homeTeam?.name, match.homeTeam?.shortName, match.awayTeam?.name, match.awayTeam?.shortName]
+    .filter(Boolean)
+    .some((name) => candidateNames.includes(normalizeTeamKey(name)));
+}
+
 function buildFormResults(form, recentMatches, selectedTeam) {
   const live = (form ?? "").split(",").map((item) => item.trim()).filter(Boolean).slice(0, 5);
   if (live.length > 0) {
@@ -940,6 +1019,68 @@ function buildScoringConsistencyPoints(matches, selectedTeam) {
         scored: goalsFor > 0,
       };
     });
+}
+
+function resolveChampionsLeagueRoundLabel(selectedMatches, competitionMatches) {
+  const activeCompetitionStage = resolveActiveChampionsLeagueStage(competitionMatches);
+  if (activeCompetitionStage) {
+    return formatChampionsLeagueStage(activeCompetitionStage);
+  }
+
+  const selectedCompetitionMatches = selectedMatches
+    .filter((match) => match.competition?.code === "CL")
+    .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+
+  const prioritizedSelectedMatch =
+    selectedCompetitionMatches.find((match) => LIVE_MATCH_STATUSES.has(match.status)) ??
+    selectedCompetitionMatches.find((match) => !["FINISHED", "CANCELLED"].includes(match.status)) ??
+    selectedCompetitionMatches[selectedCompetitionMatches.length - 1] ??
+    null;
+
+  if (prioritizedSelectedMatch?.stage) {
+    return formatChampionsLeagueStage(prioritizedSelectedMatch.stage);
+  }
+
+  const allCompetitionMatches = competitionMatches
+    .filter((match) => match.competition?.code === "CL")
+    .sort((a, b) => new Date(b.utcDate) - new Date(a.utcDate));
+
+  const prioritizedCompetitionMatch =
+    allCompetitionMatches.find(
+      (match) =>
+        LIVE_MATCH_STATUSES.has(match.status) || !["FINISHED", "CANCELLED"].includes(match.status),
+    ) ??
+    allCompetitionMatches[0] ??
+    null;
+
+  return prioritizedCompetitionMatch?.stage
+    ? formatChampionsLeagueStage(prioritizedCompetitionMatch.stage)
+    : null;
+}
+
+function formatChampionsLeagueStage(stage) {
+  const stageLabels = {
+    LEAGUE_STAGE: "League Stage",
+    QUALIFICATION: "Qualification",
+    QUALIFICATION_1: "Qualification Round 1",
+    QUALIFICATION_2: "Qualification Round 2",
+    QUALIFICATION_3: "Qualification Round 3",
+    PLAYOFFS: "Play-offs",
+    LAST_16: "Round of 16",
+    ROUND_OF_16: "Round of 16",
+    QUARTER_FINALS: "Quarter-finals",
+    SEMI_FINALS: "Semi-finals",
+    FINAL: "Final",
+  };
+
+  return (
+    stageLabels[stage] ??
+    stage
+      .toLowerCase()
+      .split("_")
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ")
+  );
 }
 
 function buildVenueForm(matches, selectedTeam, competitionCode) {
@@ -1237,19 +1378,20 @@ function buildStageTeamList(matches, stage) {
   const teams = new Map();
 
   roundMatches.forEach((match) => {
-    teams.set(String(match.homeTeam.id), {
-      team: {
-        id: String(match.homeTeam.id),
-        name: match.homeTeam.name,
-        shortName: match.homeTeam.shortName || match.homeTeam.name,
-      },
-    });
-    teams.set(String(match.awayTeam.id), {
-      team: {
-        id: String(match.awayTeam.id),
-        name: match.awayTeam.name,
-        shortName: match.awayTeam.shortName || match.awayTeam.name,
-      },
+    const candidateTeams = [match.homeTeam, match.awayTeam];
+
+    candidateTeams.forEach((team) => {
+      if (!team?.id || !team?.name) {
+        return;
+      }
+
+      teams.set(String(team.id), {
+        team: {
+          id: String(team.id),
+          name: team.name,
+          shortName: team.shortName || team.name,
+        },
+      });
     });
   });
 
@@ -1258,6 +1400,89 @@ function buildStageTeamList(matches, stage) {
 
 function buildRoundOf16TeamList(matches) {
   return buildStageTeamList(matches, "LAST_16");
+}
+
+function resolveActiveChampionsLeagueStage(matches) {
+  const championsLeagueMatches = matches.filter((match) => match.competition?.code === "CL");
+  const stagePriority = [
+    "FINAL",
+    "SEMI_FINALS",
+    "QUARTER_FINALS",
+    "LAST_16",
+    "PLAYOFFS",
+    "LEAGUE_STAGE",
+  ];
+
+  const stageHasResolvedTeams = (stage) =>
+    championsLeagueMatches.some(
+      (match) =>
+        match.stage === stage &&
+        match.homeTeam?.id &&
+        match.homeTeam?.name &&
+        match.awayTeam?.id &&
+        match.awayTeam?.name,
+    );
+
+  const activeStage =
+    stagePriority.find((stage) =>
+      championsLeagueMatches.some(
+        (match) =>
+          match.stage === stage &&
+          !["FINISHED", "CANCELLED"].includes(match.status) &&
+          match.homeTeam?.id &&
+          match.homeTeam?.name &&
+          match.awayTeam?.id &&
+          match.awayTeam?.name,
+      ),
+    ) ??
+    stagePriority.find((stage) => stageHasResolvedTeams(stage)) ??
+    null;
+
+  return activeStage;
+}
+
+function buildActiveChampionsLeagueTeams(matches, standings) {
+  const activeStage = resolveActiveChampionsLeagueStage(matches);
+  const stageTeams = activeStage ? buildStageTeamList(matches, activeStage) : [];
+  const source = stageTeams.length > 0 ? stageTeams : standings;
+
+  return source.filter(
+    (entry) =>
+      entry?.team?.name &&
+      !championsLeagueExcludedTeams.has(
+        simplifyName(entry.team.shortName || entry.team.name),
+      ),
+  );
+}
+
+function buildActiveChampionsLeagueTeamKeys(matches, standings) {
+  const activeStage = resolveActiveChampionsLeagueStage(matches);
+
+  const keys = new Set();
+
+  if (activeStage) {
+    matches
+      .filter((match) => match.competition?.code === "CL")
+      .filter((match) => match.stage === activeStage)
+      .forEach((match) => {
+        [match.homeTeam?.name, match.homeTeam?.shortName, match.awayTeam?.name, match.awayTeam?.shortName]
+          .filter(Boolean)
+          .forEach((name) => {
+            keys.add(normalizeTeamKey(name));
+            keys.add(normalizeTeamKey(simplifyName(name)));
+          });
+      });
+  }
+
+  if (keys.size === 0) {
+    standings.forEach((entry) => {
+      [entry.team.name, entry.team.shortName, simplifyName(entry.team.name), simplifyName(entry.team.shortName || "")]
+        .filter(Boolean)
+        .forEach((name) => keys.add(normalizeTeamKey(name)));
+    });
+  }
+
+  return keys;
 }
 
 function buildTitleRaceSeries(standings, matches) {
@@ -2072,7 +2297,7 @@ function rebalanceProbabilities(probabilities) {
 }
 
 function simplifyName(name) {
-  return name
+  return (name || "")
     .replace(/^AFC\s+/u, "")
     .replace(/\sFC$/u, "")
     .replace(/\sAFC$/u, "");
@@ -2258,9 +2483,9 @@ function TeamBackdrop({ name, logoUrl }) {
 
 function Metric({ label, value }) {
   return (
-    <div className="metric-card rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(255,255,255,0.028))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_40px_rgba(2,8,16,0.12)]">
+    <div className="metric-card flex h-full min-h-[118px] flex-col justify-between rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(255,255,255,0.028))] p-4">
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</p>
-      <p className="mt-3 text-lg font-semibold text-slate-100">{value}</p>
+      <p className="mt-4 text-lg font-semibold leading-snug text-slate-100">{value}</p>
     </div>
   );
 }
@@ -2274,7 +2499,7 @@ function MomentumMetric({ momentum, compact = false }) {
         : "accent-caution";
 
   return (
-    <div className={`momentum-card rounded-[24px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(255,255,255,0.03))] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_18px_40px_rgba(2,8,16,0.12)] ${compact ? "p-3.5" : "p-4"}`}>
+    <div className={`momentum-card flex h-full flex-col justify-between rounded-[22px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,0.075),rgba(255,255,255,0.03))] ${compact ? "min-h-[96px] p-3.5" : "min-h-[118px] p-4"}`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Form momentum</p>
       <p className={`font-semibold ${toneClass} ${compact ? "mt-2 text-base" : "mt-3 text-lg"}`}>{momentum.label}</p>
       <p className={`text-[11px] uppercase tracking-[0.16em] text-slate-500 ${compact ? "mt-1.5" : "mt-2"}`}>{momentum.summary}</p>
@@ -2454,7 +2679,7 @@ function PremierLeagueTrophyArt() {
 
 
 
-function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
+function LeagueTable({ standings, selectedTeamId, onSelectTeam, activeChampionsLeagueTeamKeys }) {
   return (
     <div className="overflow-hidden rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(8,15,26,0.86),rgba(7,12,20,0.72))]">
       <div className="overflow-x-auto">
@@ -2470,6 +2695,9 @@ function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
               const isSelected = String(entry.team.id) === String(selectedTeamId);
               const isLeader = index === 0;
               const teamName = simplifyName(entry.team.shortName || entry.team.name);
+              const isInChampionsLeague = activeChampionsLeagueTeamKeys.has(
+                normalizeTeamKey(teamName),
+              );
 
               return (
                 <button
@@ -2502,6 +2730,11 @@ function LeagueTable({ standings, selectedTeamId, onSelectTeam }) {
                     <ClubLogo name={teamName} logoUrl={entry.team.crest} size="table-mobile" />
                     <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                       <p className={`min-w-0 text-[12px] font-semibold leading-tight text-white sm:text-sm ${isLeader ? "text-amber-50" : "text-white"} ${teamName.length > 11 ? "break-words" : "truncate"}`}>{teamName}</p>
+                      {isInChampionsLeague ? (
+                        <span className="hidden shrink-0 rounded-full bg-cyan-300/14 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-cyan-100 ring-1 ring-cyan-200/16 sm:inline-flex">
+                          CL
+                        </span>
+                      ) : null}
                       {isLeader ? (
                         <span className="hidden shrink-0 rounded-full bg-amber-300/14 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-amber-100 ring-1 ring-amber-200/16 sm:inline-flex">
                           Leader
@@ -3060,26 +3293,38 @@ function LastMatchResultCard({ match, selectedTeam, crestMap }) {
 
   return (
     <div className="last-match-card rounded-[22px] border border-white/8 bg-slate-950/30 p-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_120px] xl:items-center">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {formatKickoff(match.utcDate)}
           </p>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <ClubLogo name={selectedTeam.name} logoUrl={teamLogo} size="sm" />
-            <div className="text-center text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)] sm:items-center">
+            <div className="flex min-w-0 items-center gap-3.5">
+              <ClubLogo name={selectedTeam.name} logoUrl={teamLogo} size="md" />
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-white">{selectedTeam.name}</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  {isHome ? "Home" : "Away"}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden text-center text-xs font-semibold uppercase tracking-[0.22em] text-slate-500 sm:block">
               vs
             </div>
-            <ClubLogo name={opponentName} logoUrl={opponentLogo} size="sm" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
-                {selectedTeam.name} vs {opponentName}
-              </p>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
-                {isHome ? "Home" : "Away"}
-              </p>
+
+            <div className="flex min-w-0 items-center gap-3.5 sm:justify-end sm:text-right">
+              <div className="min-w-0 sm:order-1">
+                <p className="truncate text-base font-semibold text-white">{opponentName}</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500">
+                  {isHome ? "Away" : "Home"}
+                </p>
+              </div>
+              <ClubLogo name={opponentName} logoUrl={opponentLogo} size="md" />
             </div>
           </div>
+
           <a
             href={highlightsUrl}
             target="_blank"
@@ -3090,7 +3335,7 @@ function LastMatchResultCard({ match, selectedTeam, crestMap }) {
           </a>
         </div>
 
-        <div className="self-start rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3 text-left lg:text-right">
+        <div className="justify-self-start rounded-[18px] border border-white/8 bg-white/[0.03] px-4 py-3 text-left xl:justify-self-end xl:text-right">
           <p className="text-2xl font-semibold text-white">
             {teamScore}-{opponentScore}
           </p>
@@ -3118,16 +3363,16 @@ function SkeletonPanel({ rows = 3 }) {
 
 function InfoCard({ title, children, divided = false, updatedAt = null }) {
   return (
-    <section className={`info-card rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_20px_50px_rgba(2,10,18,0.14)] sm:rounded-[30px] sm:p-5 ${divided ? "relative before:absolute before:left-5 before:right-5 before:top-0 before:h-px before:bg-white/[0.06]" : ""}`}>
+    <section className={`info-card rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] p-4 sm:rounded-[30px] sm:p-5 ${divided ? "relative before:absolute before:left-5 before:right-5 before:top-0 before:h-px before:bg-white/[0.06]" : ""}`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <h3 className="display-heading text-[2rem] leading-none text-white sm:text-3xl">{title}</h3>
+        <h3 className="display-heading text-[1.85rem] leading-none text-white sm:text-[2.15rem]">{title}</h3>
         {updatedAt ? (
           <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
             Updated {formatUpdatedAt(updatedAt)}
           </p>
         ) : null}
       </div>
-      <div className="mt-4 text-sm leading-7 text-slate-300 sm:text-base">{children}</div>
+      <div className="mt-4 text-sm leading-7 text-slate-300 sm:text-[15px]">{children}</div>
     </section>
   );
 }

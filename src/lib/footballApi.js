@@ -94,11 +94,9 @@ export async function getCompetitionStandings(competitionCode, signal, season = 
     writeCache(cacheKey, table);
     return table;
   } catch (error) {
-    if (error.status === 429) {
-      const stale = readStaleCache(cacheKey);
-      if (stale) {
-        return stale;
-      }
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return stale;
     }
     throw error;
   }
@@ -118,18 +116,16 @@ export async function getMatchesForTeam(teamId, signal) {
     writeCache(cacheKey, matches);
     return matches;
   } catch (error) {
-    if (error.status === 429) {
-      const stale = readStaleCache(cacheKey);
-      if (stale) {
-        return stale;
-      }
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return stale;
     }
     throw error;
   }
 }
 
 export async function getCompetitionMatches(competitionCode, signal) {
-  const cacheKey = `football-data-competition-matches-${competitionCode}`;
+  const cacheKey = `football-data-competition-matches-v2-${competitionCode}`;
   const cached = readCache(cacheKey, 15 * 60 * 1000);
 
   if (cached) {
@@ -142,11 +138,9 @@ export async function getCompetitionMatches(competitionCode, signal) {
     writeCache(cacheKey, matches);
     return matches;
   } catch (error) {
-    if (error.status === 429) {
-      const stale = readStaleCache(cacheKey);
-      if (stale) {
-        return stale;
-      }
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return stale;
     }
     throw error;
   }
@@ -166,11 +160,9 @@ export async function getCompetitionScorers(competitionCode, signal) {
     writeCache(cacheKey, scorers);
     return scorers;
   } catch (error) {
-    if (error.status === 429) {
-      const stale = readStaleCache(cacheKey);
-      if (stale) {
-        return stale;
-      }
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return stale;
     }
     throw error;
   }
@@ -189,11 +181,9 @@ export async function getTeamDetails(teamId, signal) {
     writeCache(cacheKey, team);
     return team;
   } catch (error) {
-    if (error.status === 429) {
-      const stale = readStaleCache(cacheKey);
-      if (stale) {
-        return stale;
-      }
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return stale;
     }
     throw error;
   }
