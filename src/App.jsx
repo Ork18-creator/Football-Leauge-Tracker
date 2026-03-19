@@ -16,6 +16,95 @@ const competitions = [
   { code: "BL1", name: "Bundesliga", short: "BL" },
   { code: "CL", name: "Champions League", short: "UCL" },
 ];
+const domesticCupCompetitions = [
+  { code: "FAC", name: "FA Cup" },
+  { code: "FLC", name: "EFL Cup" },
+];
+const manualDomesticCupFixtures = [
+  {
+    id: "manual-flc-final-2026-arsenal-mancity",
+    competition: { code: "FLC", name: "Football League Cup / EFL Cup" },
+    status: "SCHEDULED",
+    utcDate: "2026-03-22T16:30:00Z",
+    stage: "FINAL",
+    venue: "Wembley Stadium",
+    homeTeam: { id: "arsenal", name: "Arsenal", shortName: "Arsenal" },
+    awayTeam: { id: "man-city", name: "Manchester City", shortName: "Man City" },
+    score: {
+      fullTime: { home: null, away: null },
+    },
+  },
+  {
+    id: "manual-fac-qf-2026-southampton-arsenal",
+    competition: { code: "FAC", name: "FA Cup" },
+    status: "SCHEDULED",
+    utcDate: "2026-04-04T14:00:00Z",
+    stage: "QUARTER_FINALS",
+    venue: "St. Mary's Stadium",
+    homeTeam: { id: "southampton", name: "Southampton", shortName: "Southampton" },
+    awayTeam: { id: "arsenal", name: "Arsenal", shortName: "Arsenal" },
+    score: {
+      fullTime: { home: null, away: null },
+    },
+  },
+  {
+    id: "manual-fac-qf-2026-chelsea-portvale",
+    competition: { code: "FAC", name: "FA Cup" },
+    status: "SCHEDULED",
+    utcDate: "2026-04-04T14:00:00Z",
+    stage: "QUARTER_FINALS",
+    venue: "Stamford Bridge",
+    homeTeam: { id: "chelsea", name: "Chelsea", shortName: "Chelsea" },
+    awayTeam: { id: "port-vale", name: "Port Vale", shortName: "Port Vale" },
+    score: {
+      fullTime: { home: null, away: null },
+    },
+  },
+  {
+    id: "manual-fac-qf-2026-mancity-liverpool",
+    competition: { code: "FAC", name: "FA Cup" },
+    status: "SCHEDULED",
+    utcDate: "2026-04-04T14:00:00Z",
+    stage: "QUARTER_FINALS",
+    venue: "Etihad Stadium",
+    homeTeam: { id: "man-city", name: "Manchester City", shortName: "Man City" },
+    awayTeam: { id: "liverpool", name: "Liverpool", shortName: "Liverpool" },
+    score: {
+      fullTime: { home: null, away: null },
+    },
+  },
+  {
+    id: "manual-fac-qf-2026-westham-leeds",
+    competition: { code: "FAC", name: "FA Cup" },
+    status: "SCHEDULED",
+    utcDate: "2026-04-04T14:00:00Z",
+    stage: "QUARTER_FINALS",
+    venue: "London Stadium",
+    homeTeam: { id: "west-ham", name: "West Ham United", shortName: "West Ham" },
+    awayTeam: { id: "leeds", name: "Leeds United", shortName: "Leeds" },
+    score: {
+      fullTime: { home: null, away: null },
+    },
+  },
+];
+const manualCrestMapEntries = [
+  [
+    "Southampton",
+    "https://crests.football-data.org/340.png",
+  ],
+  [
+    "Southampton FC",
+    "https://crests.football-data.org/340.png",
+  ],
+  [
+    "Port Vale",
+    "https://upload.wikimedia.org/wikipedia/en/thumb/6/67/Port_Vale_FC_crest.svg/120px-Port_Vale_FC_crest.svg.png",
+  ],
+  [
+    "Port Vale FC",
+    "https://upload.wikimedia.org/wikipedia/en/thumb/6/67/Port_Vale_FC_crest.svg/120px-Port_Vale_FC_crest.svg.png",
+  ],
+];
 const DEFAULT_PL_TEAM_ID = "arsenal";
 const championsLeagueExcludedTeams = new Set(["Aston Villa", "Manchester United"]);
 const premierLeagueRecentWinners = [
@@ -51,6 +140,7 @@ export default function App() {
   const [matchesByTeamId, setMatchesByTeamId] = useState({});
   const [teamDetailsById, setTeamDetailsById] = useState({});
   const [standingsUpdatedAtByCompetition, setStandingsUpdatedAtByCompetition] = useState({});
+  const [competitionMatchesUpdatedAtByCode, setCompetitionMatchesUpdatedAtByCode] = useState({});
   const [scorersUpdatedAtByCompetition, setScorersUpdatedAtByCompetition] = useState({});
   const [matchesUpdatedAtByTeamId, setMatchesUpdatedAtByTeamId] = useState({});
   const [standingsError, setStandingsError] = useState("");
@@ -69,8 +159,11 @@ export default function App() {
   const championsLeagueStandings = standingsByCompetition.CL ?? [];
   const currentStandings = standingsByCompetition[competition.code] ?? [];
   const competitionMatches = competitionMatchesByCode[competition.code] ?? [];
+  const faCupMatches = competitionMatchesByCode.FAC ?? [];
+  const eflCupMatches = competitionMatchesByCode.FLC ?? [];
   const championsLeagueMatches = competitionMatchesByCode.CL ?? [];
   const standingsUpdatedAt = standingsUpdatedAtByCompetition[competition.code] ?? null;
+  const competitionMatchesUpdatedAt = competitionMatchesUpdatedAtByCode[competition.code] ?? null;
   const scorersUpdatedAt = scorersUpdatedAtByCompetition[competition.code] ?? null;
   const competitionScorers = scorersByCompetition[competition.code] ?? [];
   const selectedLocalTeam = teams.find((team) => String(team.id) === String(selectedTeamId)) ?? null;
@@ -109,12 +202,29 @@ export default function App() {
     () => buildActiveChampionsLeagueTeamKeys(championsLeagueMatches, championsLeagueStandings),
     [championsLeagueMatches, championsLeagueStandings],
   );
-  const selectedMatches = selectedStanding
-    ? matchesByTeamId[selectedStanding.team.id] ?? []
-    : [];
-  const matchesUpdatedAt = selectedStanding
-    ? matchesUpdatedAtByTeamId[selectedStanding.team.id] ?? null
-    : null;
+  const selectedCompetitionMatches = useMemo(() => {
+    if (!selectedStanding?.team?.id) {
+      return [];
+    }
+
+    return competitionMatches.filter(
+      (match) =>
+        String(match.homeTeam?.id) === String(selectedStanding.team.id) ||
+        String(match.awayTeam?.id) === String(selectedStanding.team.id),
+    );
+  }, [competitionMatches, selectedStanding?.team?.id]);
+  const selectedMatches = selectedCompetitionMatches.length
+    ? selectedCompetitionMatches
+    : selectedStanding
+      ? matchesByTeamId[selectedStanding.team.id] ?? []
+      : [];
+  const matchesUpdatedAt = selectedCompetitionMatches.length
+    ? competitionMatchesUpdatedAt
+    : selectedStanding
+      ? matchesUpdatedAtByTeamId[selectedStanding.team.id] ?? null
+      : competitionMatchesUpdatedAt;
+  const hasSelectedMatchesFallback = selectedMatches.length > 0;
+  const visibleMatchesError = hasSelectedMatchesFallback ? "" : matchesError;
   const recentMatches = selectedMatches
     .filter(
       (match) =>
@@ -130,6 +240,92 @@ export default function App() {
     )
     .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
     .slice(0, competition.code === "CL" ? 1 : 5);
+  const domesticCupUpcomingMatches = useMemo(() => {
+    if (competition.code !== "PL" || !selectedStanding?.team?.id) {
+      return [];
+    }
+
+    const selectedTeamId = String(selectedStanding.team.id);
+    const upcomingByCompetition = [...faCupMatches, ...eflCupMatches]
+      .filter(
+        (match) =>
+          !["FINISHED", "CANCELLED"].includes(match.status) &&
+          (String(match.homeTeam?.id) === selectedTeamId ||
+            String(match.awayTeam?.id) === selectedTeamId),
+      )
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+
+    return domesticCupCompetitions
+      .map(({ code }) => upcomingByCompetition.find((match) => match.competition?.code === code))
+      .filter(Boolean);
+  }, [competition.code, eflCupMatches, faCupMatches, selectedStanding?.team?.id]);
+  const upcomingChampionsLeagueMatches = useMemo(() => {
+    if (!["PL", "PD", "SA", "BL1"].includes(competition.code) || !selectedStanding?.team?.id) {
+      return [];
+    }
+
+    const selectedTeamId = String(selectedStanding.team.id);
+    return championsLeagueMatches
+      .filter(
+        (match) =>
+          !["FINISHED", "CANCELLED"].includes(match.status) &&
+          (String(match.homeTeam?.id) === selectedTeamId ||
+            String(match.awayTeam?.id) === selectedTeamId),
+      )
+      .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
+      .slice(0, 1);
+  }, [championsLeagueMatches, competition.code, selectedStanding?.team?.id]);
+  const displayedDomesticCupUpcomingMatches = useMemo(() => {
+    if (domesticCupUpcomingMatches.length > 0) {
+      return domesticCupUpcomingMatches;
+    }
+
+    if (competition.code !== "PL") {
+      return [];
+    }
+
+    const selectedTeamKeys = new Set(
+      [
+        selectedTeam.name,
+        selectedTeam.apiTeamName,
+        simplifyName(selectedTeam.name),
+        simplifyName(selectedTeam.apiTeamName),
+      ]
+        .filter(Boolean)
+        .map((name) => normalizeTeamKey(name)),
+    );
+
+    return manualDomesticCupFixtures.filter((match) => {
+      const isUpcoming = new Date(match.utcDate).getTime() >= Date.now();
+      const homeKeys = [
+        match.homeTeam.name,
+        match.homeTeam.shortName,
+        simplifyName(match.homeTeam.name),
+        simplifyName(match.homeTeam.shortName || ""),
+      ]
+        .filter(Boolean)
+        .map((name) => normalizeTeamKey(name));
+      const awayKeys = [
+        match.awayTeam.name,
+        match.awayTeam.shortName,
+        simplifyName(match.awayTeam.name),
+        simplifyName(match.awayTeam.shortName || ""),
+      ]
+        .filter(Boolean)
+        .map((name) => normalizeTeamKey(name));
+      return (
+        isUpcoming &&
+        [...homeKeys, ...awayKeys].some((key) => selectedTeamKeys.has(key))
+      );
+    });
+  }, [competition.code, domesticCupUpcomingMatches, selectedTeam.apiTeamName, selectedTeam.name]);
+  const extraCompetitionUpcomingMatches = useMemo(
+    () =>
+      [...displayedDomesticCupUpcomingMatches, ...upcomingChampionsLeagueMatches].sort(
+        (a, b) => new Date(a.utcDate) - new Date(b.utcDate),
+      ),
+    [displayedDomesticCupUpcomingMatches, upcomingChampionsLeagueMatches],
+  );
   const liveMatchFromCompetition =
     competitionMatches.find(
       (match) =>
@@ -174,7 +370,14 @@ export default function App() {
           : premierLeagueRecentWinners;
   const showRecentWinners = ["PL", "PD", "SA", "BL1"].includes(competition.code);
   const crestMap = new Map(
-    [...currentStandings, ...plStandings].flatMap((entry) => [
+    [
+      ...currentStandings,
+      ...plStandings,
+      ...championsLeagueStandings,
+      ...(standingsByCompetition.PD ?? []),
+      ...(standingsByCompetition.SA ?? []),
+      ...(standingsByCompetition.BL1 ?? []),
+    ].flatMap((entry) => [
       [entry.team.id, entry.team.crest],
       [entry.team.name, entry.team.crest],
       [entry.team.shortName, entry.team.crest],
@@ -184,6 +387,33 @@ export default function App() {
       [normalizeTeamKey(entry.team.shortName || entry.team.name), entry.team.crest],
     ]),
   );
+  [
+    ["Manchester City", "Man City"],
+    ["Manchester City FC", "Man City"],
+    ["West Ham United", "West Ham"],
+    ["Liverpool FC", "Liverpool"],
+    ["Arsenal FC", "Arsenal"],
+    ["Chelsea FC", "Chelsea"],
+    ["Leeds United FC", "Leeds United"],
+    ["Southampton FC", "Southampton"],
+    ["Southampton FC", "South Hampton"],
+  ].forEach(([sourceName, aliasName]) => {
+    const crest =
+      crestMap.get(sourceName) ??
+      crestMap.get(normalizeTeamKey(sourceName)) ??
+      crestMap.get(simplifyName(sourceName));
+
+    if (crest) {
+      crestMap.set(aliasName, crest);
+      crestMap.set(normalizeTeamKey(aliasName), crest);
+      crestMap.set(simplifyName(aliasName), crest);
+    }
+  });
+  manualCrestMapEntries.forEach(([name, crest]) => {
+    crestMap.set(name, crest);
+    crestMap.set(normalizeTeamKey(name), crest);
+    crestMap.set(simplifyName(name), crest);
+  });
 
   function handleSelectTeam(teamId) {
     const nextTeamId = String(teamId);
@@ -249,6 +479,10 @@ export default function App() {
           ...current,
           [competition.code]: matches,
         }));
+        setCompetitionMatchesUpdatedAtByCode((current) => ({
+          ...current,
+          [competition.code]: Date.now(),
+        }));
       } catch (error) {
         if (error.name !== "AbortError") {
           return;
@@ -270,6 +504,10 @@ export default function App() {
           ...current,
           CL: matches,
         }));
+        setCompetitionMatchesUpdatedAtByCode((current) => ({
+          ...current,
+          CL: Date.now(),
+        }));
       } catch (error) {
         if (error.name !== "AbortError") {
           return;
@@ -278,6 +516,46 @@ export default function App() {
     })();
     return () => controller.abort();
   }, [apiReady, competitionMatchesByCode]);
+
+  useEffect(() => {
+    if (!apiReady || competition.code !== "PL") {
+      return undefined;
+    }
+
+    const missingCupCodes = domesticCupCompetitions
+      .map((item) => item.code)
+      .filter((code) => !competitionMatchesByCode[code]);
+
+    if (missingCupCodes.length === 0) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    (async () => {
+      await Promise.all(
+        missingCupCodes.map(async (code) => {
+          try {
+            const matches = await getCompetitionMatches(code, controller.signal);
+            setCompetitionMatchesByCode((current) => ({
+              ...current,
+              [code]: matches,
+            }));
+            setCompetitionMatchesUpdatedAtByCode((current) => ({
+              ...current,
+              [code]: Date.now(),
+            }));
+          } catch (error) {
+            if (error.name !== "AbortError") {
+              return;
+            }
+          }
+        }),
+      );
+    })();
+
+    return () => controller.abort();
+  }, [apiReady, competition.code, competitionMatchesByCode]);
 
   useEffect(() => {
     if (!apiReady || standingsByCompetition.CL) {
@@ -331,7 +609,12 @@ export default function App() {
   }, [apiReady, competition.code, competition.name, scorersByCompetition]);
 
   useEffect(() => {
-    if (!apiReady || !selectedStanding?.team?.id || matchesByTeamId[selectedStanding.team.id]) {
+    if (
+      !apiReady ||
+      !selectedStanding?.team?.id ||
+      matchesByTeamId[selectedStanding.team.id] ||
+      selectedCompetitionMatches.length > 0
+    ) {
       return undefined;
     }
     const controller = new AbortController();
@@ -358,7 +641,7 @@ export default function App() {
       }
     })();
     return () => controller.abort();
-  }, [apiReady, matchesByTeamId, selectedStanding?.team?.id]);
+  }, [apiReady, matchesByTeamId, selectedCompetitionMatches.length, selectedStanding?.team?.id]);
 
 
   useEffect(() => {
@@ -391,7 +674,9 @@ export default function App() {
     }
 
     const hasMatchesForSelection = selectedStanding?.team?.id
-      ? Boolean(matchesByTeamId[selectedStanding.team.id]) || Boolean(matchesError)
+      ? Boolean(matchesByTeamId[selectedStanding.team.id]) ||
+        selectedCompetitionMatches.length > 0 ||
+        Boolean(matchesError)
       : false;
 
     if (!selectedStanding || isLoadingMatches || !hasMatchesForSelection) {
@@ -410,6 +695,7 @@ export default function App() {
     isSwitchingClub,
     matchesByTeamId,
     matchesError,
+    selectedCompetitionMatches.length,
     selectedStanding,
   ]);
 
@@ -759,8 +1045,8 @@ export default function App() {
                   <EmptyMessage>Add your API key to view the upcoming match.</EmptyMessage>
                 ) : isLoadingMatches && upcomingMatches.length === 0 ? (
                   <SkeletonPanel rows={1} />
-                ) : matchesError ? (
-                  <EmptyMessage>{matchesError}</EmptyMessage>
+                ) : visibleMatchesError ? (
+                  <EmptyMessage>{visibleMatchesError}</EmptyMessage>
                 ) : upcomingMatches.length > 0 ? (
                   <MatchList
                     matches={upcomingMatches.slice(0, 1)}
@@ -776,13 +1062,38 @@ export default function App() {
                 )}
               </InfoCard>
 
+              {["PL", "PD", "SA", "BL1"].includes(competition.code) ? (
+                <InfoCard title="Upcoming Cup & European Competitions" divided updatedAt={matchesUpdatedAt}>
+                  {!apiReady ? (
+                    <EmptyMessage>Add your API key to view upcoming cup and European fixtures.</EmptyMessage>
+                  ) : extraCompetitionUpcomingMatches.length > 0 ? (
+                    <MatchList
+                      matches={extraCompetitionUpcomingMatches}
+                      selectedTeam={selectedTeam}
+                      crestMap={crestMap}
+                      standings={currentStandings}
+                      allMatches={[
+                        ...selectedMatches,
+                        ...faCupMatches,
+                        ...eflCupMatches,
+                        ...championsLeagueMatches,
+                      ]}
+                      competitionCode={competition.code}
+                      upcoming
+                    />
+                  ) : (
+                    <EmptyMessage>No upcoming domestic cup or Champions League fixture available.</EmptyMessage>
+                  )}
+                </InfoCard>
+              ) : null}
+
               <InfoCard title="Last Match Result" divided updatedAt={matchesUpdatedAt}>
                 {!apiReady ? (
                   <EmptyMessage>Add your API key to view the last match result.</EmptyMessage>
                 ) : isLoadingMatches && recentMatches.length === 0 ? (
                   <SkeletonPanel rows={1} />
-                ) : matchesError ? (
-                  <EmptyMessage>{matchesError}</EmptyMessage>
+                ) : visibleMatchesError ? (
+                  <EmptyMessage>{visibleMatchesError}</EmptyMessage>
                 ) : recentMatches.length > 0 ? (
                   <LastMatchResultCard
                     match={recentMatches[0]}
@@ -799,8 +1110,8 @@ export default function App() {
                   <EmptyMessage>Add your API key to view the form trend.</EmptyMessage>
                 ) : isLoadingMatches && recentMatches.length === 0 ? (
                   <SkeletonPanel rows={2} />
-                ) : matchesError ? (
-                  <EmptyMessage>{matchesError}</EmptyMessage>
+                ) : visibleMatchesError ? (
+                  <EmptyMessage>{visibleMatchesError}</EmptyMessage>
                 ) : recentMatches.length > 0 ? (
                   <LineFormTrendChart
                     matches={recentMatches}
@@ -819,8 +1130,8 @@ export default function App() {
                     <EmptyMessage>Add your API key to view recent matches.</EmptyMessage>
                   ) : isLoadingMatches && recentMatches.length === 0 ? (
                     <SkeletonPanel rows={3} />
-                  ) : matchesError ? (
-                    <EmptyMessage>{matchesError}</EmptyMessage>
+                  ) : visibleMatchesError ? (
+                    <EmptyMessage>{visibleMatchesError}</EmptyMessage>
                   ) : recentMatches.length > 0 ? (
                     <MatchList matches={recentMatches} selectedTeam={selectedTeam} crestMap={crestMap} />
                   ) : (
@@ -833,8 +1144,8 @@ export default function App() {
                     <EmptyMessage>Add your API key to view upcoming matches.</EmptyMessage>
                   ) : isLoadingMatches && upcomingMatches.length === 0 ? (
                     <SkeletonPanel rows={2} />
-                  ) : matchesError ? (
-                    <EmptyMessage>{matchesError}</EmptyMessage>
+                  ) : visibleMatchesError ? (
+                    <EmptyMessage>{visibleMatchesError}</EmptyMessage>
                   ) : upcomingMatches.length > 0 ? (
                     <MatchList
                       matches={upcomingMatches}
@@ -1677,12 +1988,13 @@ function MatchList({ matches, selectedTeam, crestMap, standings = [], allMatches
       {matches.map((match) => {
         const isHome = match.homeTeam.name === selectedTeam.apiTeamName;
         const isLiveMatch = ["IN_PLAY", "PAUSED", "LIVE"].includes(match.status);
+        const matchCompetitionCode = match.competition?.code ?? competitionCode;
         const teamScore = isHome ? match.score.fullTime.home : match.score.fullTime.away;
         const opponentScore = isHome ? match.score.fullTime.away : match.score.fullTime.home;
         const homeLogo = crestMap.get(match.homeTeam.id) ?? crestMap.get(match.homeTeam.name);
         const awayLogo = crestMap.get(match.awayTeam.id) ?? crestMap.get(match.awayTeam.name);
         const previousMeeting =
-          upcoming && competitionCode === "CL"
+          upcoming && matchCompetitionCode === "CL"
             ? findLastLeg(match, allMatches, selectedTeam)
             : upcoming
               ? findLastMeeting(match, allMatches, selectedTeam)
@@ -1693,6 +2005,18 @@ function MatchList({ matches, selectedTeam, crestMap, standings = [], allMatches
           <article key={match.id} className="match-card rounded-[20px] border border-white/8 bg-slate-950/35 p-3">
             <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
               <div className="min-w-0 flex-1">
+                {upcoming && match.competition?.name ? (
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1">
+                      {match.competition.name}
+                    </span>
+                    {match.stage ? (
+                      <span className="rounded-full bg-white/[0.06] px-2.5 py-1">
+                        {formatChampionsLeagueStage(match.stage)}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_42px_minmax(0,1fr)] xl:items-center">
                   <ClubSide name={simplifyName(match.homeTeam.name)} logoUrl={homeLogo} sideLabel="Home" />
                   <div className="hidden text-center text-xs font-semibold uppercase tracking-[0.28em] text-slate-500 xl:block">vs</div>
@@ -1700,10 +2024,12 @@ function MatchList({ matches, selectedTeam, crestMap, standings = [], allMatches
                 </div>
                 <div className="mt-2.5 flex flex-wrap gap-1.5 text-xs font-medium text-slate-400">
                   <span className="rounded-full bg-white/[0.06] px-3 py-1.5">{formatKickoff(match.utcDate)}</span>
-                  <span className="rounded-full bg-white/[0.06] px-3 py-1.5">Stadium: {isHome ? selectedTeam.stadium : simplifyName(match.homeTeam.name)}</span>
+                  <span className="rounded-full bg-white/[0.06] px-3 py-1.5">
+                    Stadium: {match.venue ?? (isHome ? selectedTeam.stadium : simplifyName(match.homeTeam.name))}
+                  </span>
                   {previousMeeting ? (
                     <span className="rounded-full bg-white/[0.06] px-3 py-1.5">
-                      {competitionCode === "CL" ? "Last leg" : "Last meeting"}: {previousMeeting}
+                      {matchCompetitionCode === "CL" ? "Last leg" : "Last meeting"}: {previousMeeting}
                     </span>
                   ) : null}
                 </div>
@@ -1840,7 +2166,7 @@ function LineFormTrendChart({
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
         <div className="rounded-[20px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.06))] p-4">
           <p className="mb-3 text-sm text-slate-400">
-            Oldest result to newest result.
+            Last 5 match results / Points accumulated
           </p>
           <div className="grid grid-cols-[36px_minmax(0,1fr)] gap-3">
             <div className="flex h-40 flex-col justify-between py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -2323,6 +2649,11 @@ function resolveCrestUrl(crestMap, teamName) {
     "Bayer Leverkusen": ["Bayer 04 Leverkusen"],
     "Manchester City": ["Manchester City FC"],
     "Liverpool": ["Liverpool FC"],
+    Southampton: ["Southampton FC", "South Hampton"],
+    "Port Vale": ["Port Vale FC"],
+    Chelsea: ["Chelsea FC"],
+    "West Ham": ["West Ham United", "West Ham United FC"],
+    "Leeds United": ["Leeds United FC", "Leeds"],
   };
 
   const candidates = [

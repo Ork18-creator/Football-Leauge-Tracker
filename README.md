@@ -1,21 +1,24 @@
 # Football League Tracker
 
-Football League Tracker is a multi-league football dashboard built as a product-style frontend experience for tracking club performance, live context, and league-wide insights.
+Football League Tracker is a product-style football analytics dashboard built to help fans explore club performance across multiple competitions in one place.
 
-It is designed to help a fan pick a club and instantly understand:
+It combines league tables, form analysis, live match context, club insights, scorer leaderboards, and upcoming fixtures into a polished dashboard experience.
 
-- where the club stands in the table
-- current points, goals, and clean sheets
+## Product Overview
+
+Football League Tracker lets a user choose a club and instantly understand:
+
+- where the club sits in the table
+- current points, rank, goals scored, and clean sheets
 - recent form and momentum
-- upcoming matches and recent results
-- league-wide top scorers
+- last match result and next upcoming fixture
+- top scorers in the competition
 - clubs with the most goals
 - clubs with the most clean sheets
 - recent league winners
+- competition-specific context such as Champions League progression
 
-## What The Product Does
-
-The app provides a live football analysis experience across multiple competitions:
+## Supported Competitions
 
 - Premier League
 - LaLiga
@@ -23,47 +26,60 @@ The app provides a live football analysis experience across multiple competition
 - Bundesliga
 - Champions League
 
-For league competitions, the dashboard includes:
+## Key Features
 
-- live league table
-- top 4 title-race comparison
-- club summary metrics
-- current top scorers
-- most goals leaderboard
-- most clean sheets leaderboard
-- last 3 league winners
-- recent match analysis
-- upcoming fixture analysis
-
-For the selected club, the app shows:
-
-- manager
-- stadium
-- current rank
-- points
-- goals scored
-- average goals per game
-- average goals conceded
-- clean sheets
-- form guide
-- form momentum
-- form analysis charts
-- last match result
-- next upcoming match
-- YouTube highlights search link for the last match
-
-## Product Highlights
-
-- Built with a modern dashboard-style UI
-- Uses live competition and club data
-- Supports multiple domestic leagues plus Champions League
-- Includes visual analysis such as:
+- Multi-league dashboard experience with a product-style UI
+- Live standings and club-level metrics
+- Current action and live match context
+- Last match result with quick access to YouTube highlights
+- Form analysis with:
   - points trend
   - goals scored vs conceded trend
   - scoring consistency
-  - win/draw/loss distribution
+  - win / draw / loss distribution
   - home and away form
-- Designed as a portfolio-ready football product rather than a simple stats page
+  - clean sheet rate
+- League-wide panels for:
+  - current top scorers
+  - most goals
+  - most clean sheets
+  - recent winners
+- Club-specific upcoming cup and European competition tracking where data is available
+
+## Screenshots
+
+This repository is ready for screenshot-based portfolio presentation.
+
+Add product screenshots to:
+
+- [screenshots/](/C:/Users/omkes/Downloads/Leauge%20football%20details/screenshots)
+
+Suggested screenshots to include:
+
+1. `dashboard-premier-league.png`
+2. `dashboard-champions-league.png`
+3. `mobile-view.png`
+4. `form-analysis.png`
+
+Once screenshots are added, you can embed them directly in this README.
+
+Example markdown:
+
+```md
+![Premier League Dashboard](./screenshots/dashboard-premier-league.png)
+```
+
+## Product Positioning
+
+This project is designed as a portfolio-ready football product concept rather than a basic stats viewer.
+
+It focuses on:
+
+- clean presentation
+- data hierarchy
+- football-specific insight panels
+- multi-competition browsing
+- polished dashboard interactions
 
 ## Tech Stack
 
@@ -73,35 +89,21 @@ For the selected club, the app shows:
 - Tailwind CSS
 - Vite
 
-## API Integration
+## Data Source
 
-The app uses [football-data.org](https://www.football-data.org/documentation/api) for live data.
+The live data layer is powered primarily by [football-data.org](https://www.football-data.org/documentation/api).
 
-Current API-powered features include:
+The app uses that API for:
 
 - competition standings
-- club fixtures and results
+- team fixtures and match history
 - team details
-- top scorers by competition
+- top scorers
+- competition match feeds
 
-The app uses a local proxy during development so the API key is not exposed directly in frontend requests.
+Some cup fixtures currently use manual fallbacks where the active API plan does not provide reliable domestic cup coverage.
 
-## Netlify Deployment
-
-For Netlify, add this environment variable in your site settings before deploying:
-
-```powershell
-FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
-```
-
-This project includes:
-
-- `netlify.toml` for build + redirect configuration
-- `netlify/functions/football-data.js` as a production proxy to `football-data.org`
-
-Without that Netlify environment variable, the deployed site will show fallback messages like `Add your API key...`.
-
-## Local Setup
+## Local Development
 
 1. Install dependencies
 
@@ -109,79 +111,72 @@ Without that Netlify environment variable, the deployed site will show fallback 
 npm.cmd install
 ```
 
-2. Create a local environment file
+2. Create a local environment file:
 
 ```powershell
 FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
 ```
 
-Save that in:
+Save it in:
 
 ```powershell
 .env.local
 ```
 
-3. Start the development server
+3. Start the app
 
 ```powershell
-npm.cmd run dev -- --host 127.0.0.1 --port 4173
+npm.cmd run dev -- --host 127.0.0.1 --port 4174
 ```
 
 4. Open:
 
-[http://127.0.0.1:4173](http://127.0.0.1:4173)
+[http://127.0.0.1:4174](http://127.0.0.1:4174)
 
-## Auto Push Workflow
+## Netlify Deployment
 
-If you want local changes in this project to auto-commit and auto-push to GitHub, run:
+For Netlify, add this environment variable:
 
 ```powershell
-npm.cmd run auto-push
+FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
 ```
 
-What it does:
+This project includes:
 
-- watches this repo for file changes
-- waits briefly for edits to settle
-- runs `git add -A`
-- creates an automatic commit
-- pushes to `origin/main`
-- logs each automatic push to `push-log.csv`
+- [netlify.toml](/C:/Users/omkes/Downloads/Leauge%20football%20details/netlify.toml)
+- [netlify/functions/football-data.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/netlify/functions/football-data.js)
 
-Use this carefully. It is best for solo development because it will also push work-in-progress changes.
-
-The push log is Excel-friendly, so you can open `push-log.csv` in Excel and track:
-
-- date
-- time
-- branch
-- commit hash
-- commit message
-
-`push-log.csv` stays local on your machine so it can store the final pushed commit hash accurately.
+Without that variable, the deployed app will show fallback messages instead of live data.
 
 ## Project Structure
 
-- `src/App.jsx` contains the main application UI and dashboard logic
-- `src/lib/footballApi.js` contains the live football API helpers
-- `src/data/teams.js` contains local club metadata used to enrich the UI
-- `src/index.css` contains global styles and visual design rules
-- `vite.config.js` contains the Vite setup and development proxy
+- [src/App.jsx](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/App.jsx) - main UI and dashboard logic
+- [src/lib/footballApi.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/lib/footballApi.js) - API integration and caching
+- [src/data/teams.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/data/teams.js) - local club metadata
+- [src/index.css](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/index.css) - global styling and theme system
+- [vite.config.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/vite.config.js) - Vite config
 
 ## Notes
 
-- `.env.local` is ignored by git and should not be committed
-- some historical winners are currently maintained manually in the frontend
-- production deployment will need a production-safe proxy or backend for the football API
+- `.env.local` is ignored by git and should never be committed
+- some recent-winner data is maintained manually
+- some domestic cup fixtures currently use verified public-source fallbacks
+- live API coverage depends on your football-data.org plan
 
-## Future Improvements
+## Roadmap
 
-- production deployment with serverless API proxy
-- historical season support
-- more advanced player-level analytics
-- injury and assist data through additional APIs
-- mobile-specific UI refinement
+- stronger production data reliability for domestic cup competitions
+- richer event-level match data such as scorers and goal timestamps
+- historical season analysis
+- deeper player-level analytics
+- improved mobile-specific layout refinements
+- additional portfolio screenshots and product branding assets
 
-## Repository Goal
+## Why This Repo Exists
 
-This repository is intended to present Football League Tracker as a polished football analytics product concept, suitable for portfolio, product showcase, and continued feature expansion.
+This repository presents Football League Tracker as a football analytics product concept suitable for:
+
+- portfolio presentation
+- frontend product showcase
+- continued feature expansion
+- deployment on platforms like Netlify

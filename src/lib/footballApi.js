@@ -1,4 +1,5 @@
 const API_BASE_URL = "/api/football-data/v4";
+const inFlightRequests = new Map();
 
 function readCache(key, maxAgeMs) {
   if (typeof window === "undefined") {
@@ -60,17 +61,37 @@ function writeCache(key, data) {
 }
 
 async function request(path, signal) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    signal,
-  });
+  const requestUrl = `${API_BASE_URL}${path}`;
 
-  if (!response.ok) {
-    const error = new Error(`Football data request failed with ${response.status}`);
-    error.status = response.status;
-    throw error;
+  if (!signal && inFlightRequests.has(requestUrl)) {
+    return inFlightRequests.get(requestUrl);
   }
 
-  return response.json();
+  const promise = (async () => {
+    const response = await fetch(requestUrl, {
+      signal,
+    });
+
+    if (!response.ok) {
+      const error = new Error(`Football data request failed with ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+
+    return response.json();
+  })();
+
+  if (!signal) {
+    inFlightRequests.set(requestUrl, promise);
+  }
+
+  try {
+    return await promise;
+  } finally {
+    if (!signal) {
+      inFlightRequests.delete(requestUrl);
+    }
+  }
 }
 
 export function hasFootballApiToken() {
@@ -80,7 +101,7 @@ export function hasFootballApiToken() {
 export async function getCompetitionStandings(competitionCode, signal, season = null) {
   const seasonSuffix = season ? `-${season}` : "";
   const cacheKey = `football-data-standings-${competitionCode}${seasonSuffix}`;
-  const cached = readCache(cacheKey, 15 * 60 * 1000);
+  const cached = readCache(cacheKey, 60 * 60 * 1000);
 
   if (cached) {
     return cached;
@@ -104,7 +125,7 @@ export async function getCompetitionStandings(competitionCode, signal, season = 
 
 export async function getMatchesForTeam(teamId, signal) {
   const cacheKey = `football-data-matches-v2-${teamId}`;
-  const cached = readCache(cacheKey, 15 * 60 * 1000);
+  const cached = readCache(cacheKey, 60 * 60 * 1000);
 
   if (cached) {
     return cached;
@@ -126,7 +147,7 @@ export async function getMatchesForTeam(teamId, signal) {
 
 export async function getCompetitionMatches(competitionCode, signal) {
   const cacheKey = `football-data-competition-matches-v2-${competitionCode}`;
-  const cached = readCache(cacheKey, 15 * 60 * 1000);
+  const cached = readCache(cacheKey, 60 * 60 * 1000);
 
   if (cached) {
     return cached;
@@ -148,7 +169,7 @@ export async function getCompetitionMatches(competitionCode, signal) {
 
 export async function getCompetitionScorers(competitionCode, signal) {
   const cacheKey = `football-data-competition-scorers-${competitionCode}`;
-  const cached = readCache(cacheKey, 15 * 60 * 1000);
+  const cached = readCache(cacheKey, 60 * 60 * 1000);
 
   if (cached) {
     return cached;
