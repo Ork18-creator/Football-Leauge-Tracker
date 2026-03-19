@@ -66,11 +66,22 @@ export async function handler(event) {
 
     const body = await response.text();
 
+    const cacheHeaders = response.ok
+      ? {
+          "Cache-Control": "public, max-age=60, must-revalidate",
+          "CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+          "Netlify-CDN-Cache-Control":
+            "public, max-age=900, stale-while-revalidate=86400, durable",
+        }
+      : {
+          "Cache-Control": "no-store",
+        };
+
     return {
       statusCode: response.status,
       headers: {
         "Content-Type": response.headers.get("content-type") ?? "application/json",
-        "Cache-Control": "public, max-age=60",
+        ...cacheHeaders,
       },
       body,
     };

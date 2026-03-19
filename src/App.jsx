@@ -908,18 +908,20 @@ export default function App() {
 
                 {showRecentWinners ? (
                   <section className="side-panel rounded-[22px] border border-white/10 bg-white/[0.045] p-4 sm:rounded-[26px] sm:p-5">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-                      Recent champions
-                    </p>
-                    <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
-                      {competition.code === "PD"
-                        ? "Last 3 LaLiga Winners"
-                        : competition.code === "SA"
-                          ? "Last 3 Serie A Winners"
-                          : competition.code === "BL1"
-                            ? "Last 3 Bundesliga Winners"
-                            : "Last 3 PL Winners"}
-                    </h3>
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
+                        Recent champions
+                      </p>
+                      <h3 className="display-heading mt-3 text-[2rem] leading-none text-white sm:text-3xl">
+                        {competition.code === "PD"
+                          ? "Last 3 LaLiga Winners"
+                          : competition.code === "SA"
+                            ? "Last 3 Serie A Winners"
+                            : competition.code === "BL1"
+                              ? "Last 3 Bundesliga Winners"
+                              : "Last 3 PL Winners"}
+                      </h3>
+                    </div>
                     <div className="mt-4">
                       <RecentWinnersTable winners={recentWinners} crestMap={crestMap} />
                     </div>

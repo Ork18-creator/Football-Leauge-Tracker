@@ -48,26 +48,23 @@ Football League Tracker lets a user choose a club and instantly understand:
 
 ## Screenshots
 
-This repository is ready for screenshot-based portfolio presentation.
+This repository includes actual product screenshots for portfolio presentation.
 
-Add product screenshots to:
+### Main Dashboard
 
-- [screenshots/](/C:/Users/omkes/Downloads/Leauge%20football%20details/screenshots)
+![Main Dashboard](./screenshots/Main.png)
 
-Suggested screenshots to include:
+### Form Analysis
 
-1. `dashboard-premier-league.png`
-2. `dashboard-champions-league.png`
-3. `mobile-view.png`
-4. `form-analysis.png`
+![Form Analysis](./screenshots/Analysis.png)
 
-Once screenshots are added, you can embed them directly in this README.
+### League Table
 
-Example markdown:
+![League Table](./screenshots/Leauge-Table.png)
 
-```md
-![Premier League Dashboard](./screenshots/dashboard-premier-league.png)
-```
+### Top Scorers
+
+![Top Scorers](./screenshots/Top%20score.png)
 
 ## Product Positioning
 
