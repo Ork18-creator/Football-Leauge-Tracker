@@ -143,9 +143,9 @@ export default function App() {
   const [competitionMatchesUpdatedAtByCode, setCompetitionMatchesUpdatedAtByCode] = useState({});
   const [scorersUpdatedAtByCompetition, setScorersUpdatedAtByCompetition] = useState({});
   const [matchesUpdatedAtByTeamId, setMatchesUpdatedAtByTeamId] = useState({});
-  const [standingsError, setStandingsError] = useState("");
-  const [matchesError, setMatchesError] = useState("");
-  const [scorersError, setScorersError] = useState("");
+  const [standingsErrorByCompetition, setStandingsErrorByCompetition] = useState({});
+  const [matchesErrorByTeamId, setMatchesErrorByTeamId] = useState({});
+  const [scorersErrorByCompetition, setScorersErrorByCompetition] = useState({});
   const [isLoadingStandings, setIsLoadingStandings] = useState(false);
   const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [isLoadingScorers, setIsLoadingScorers] = useState(false);
@@ -165,6 +165,8 @@ export default function App() {
   const standingsUpdatedAt = standingsUpdatedAtByCompetition[competition.code] ?? null;
   const competitionMatchesUpdatedAt = competitionMatchesUpdatedAtByCode[competition.code] ?? null;
   const scorersUpdatedAt = scorersUpdatedAtByCompetition[competition.code] ?? null;
+  const standingsError = standingsErrorByCompetition[competition.code] ?? "";
+  const scorersError = scorersErrorByCompetition[competition.code] ?? "";
   const competitionScorers = scorersByCompetition[competition.code] ?? [];
   const selectedLocalTeam = teams.find((team) => String(team.id) === String(selectedTeamId)) ?? null;
   const championsLeagueTeams = useMemo(
@@ -223,6 +225,9 @@ export default function App() {
     : selectedStanding
       ? matchesUpdatedAtByTeamId[selectedStanding.team.id] ?? null
       : competitionMatchesUpdatedAt;
+  const matchesError = selectedStanding?.team?.id
+    ? matchesErrorByTeamId[selectedStanding.team.id] ?? ""
+    : "";
   const hasSelectedMatchesFallback = selectedMatches.length > 0;
   const visibleMatchesError = hasSelectedMatchesFallback ? "" : matchesError;
   const recentMatches = selectedMatches
@@ -445,7 +450,10 @@ export default function App() {
     (async () => {
       try {
         setIsLoadingStandings(true);
-        setStandingsError("");
+        setStandingsErrorByCompetition((current) => ({
+          ...current,
+          [competition.code]: "",
+        }));
         const table = await getCompetitionStandings(competition.code, controller.signal);
         setStandingsByCompetition((current) => ({ ...current, [competition.code]: table }));
         setStandingsUpdatedAtByCompetition((current) => ({
@@ -454,11 +462,13 @@ export default function App() {
         }));
       } catch (error) {
         if (error.name !== "AbortError") {
-          setStandingsError(
-            error.status === 429
-              ? `The live ${competition.name} API is rate-limited right now. Please wait a moment and refresh.`
-              : `Unable to load the live ${competition.name} table right now.`,
-          );
+          setStandingsErrorByCompetition((current) => ({
+            ...current,
+            [competition.code]:
+              error.status === 429
+                ? `The live ${competition.name} API is rate-limited right now. Please wait a moment and refresh.`
+                : `Unable to load the live ${competition.name} table right now.`,
+          }));
         }
       } finally {
         setIsLoadingStandings(false);
@@ -583,7 +593,10 @@ export default function App() {
     (async () => {
       try {
         setIsLoadingScorers(true);
-        setScorersError("");
+        setScorersErrorByCompetition((current) => ({
+          ...current,
+          [competition.code]: "",
+        }));
         const scorers = await getCompetitionScorers(competition.code, controller.signal);
         setScorersByCompetition((current) => ({
           ...current,
@@ -595,11 +608,13 @@ export default function App() {
         }));
       } catch (error) {
         if (error.name !== "AbortError") {
-          setScorersError(
-            error.status === 429
-              ? `The live ${competition.name} scorers API is rate-limited right now. Please wait a moment and refresh.`
-              : `Unable to load the live ${competition.name} top scorer right now.`,
-          );
+          setScorersErrorByCompetition((current) => ({
+            ...current,
+            [competition.code]:
+              error.status === 429
+                ? `The live ${competition.name} scorers API is rate-limited right now. Please wait a moment and refresh.`
+                : `Unable to load the live ${competition.name} top scorer right now.`,
+          }));
         }
       } finally {
         setIsLoadingScorers(false);
@@ -621,7 +636,10 @@ export default function App() {
     (async () => {
       try {
         setIsLoadingMatches(true);
-        setMatchesError("");
+        setMatchesErrorByTeamId((current) => ({
+          ...current,
+          [selectedStanding.team.id]: "",
+        }));
         const matches = await getMatchesForTeam(selectedStanding.team.id, controller.signal);
         setMatchesByTeamId((current) => ({ ...current, [selectedStanding.team.id]: matches }));
         setMatchesUpdatedAtByTeamId((current) => ({
@@ -630,11 +648,13 @@ export default function App() {
         }));
       } catch (error) {
         if (error.name !== "AbortError") {
-          setMatchesError(
-            error.status === 429
-              ? "The live fixtures API is rate-limited right now. Please wait a moment and refresh."
-              : "Unable to load the club's live fixtures right now.",
-          );
+          setMatchesErrorByTeamId((current) => ({
+            ...current,
+            [selectedStanding.team.id]:
+              error.status === 429
+                ? "The live fixtures API is rate-limited right now. Please wait a moment and refresh."
+                : "Unable to load the club's live fixtures right now.",
+          }));
         }
       } finally {
         setIsLoadingMatches(false);
