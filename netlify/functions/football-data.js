@@ -1,5 +1,31 @@
 const API_ORIGIN = "https://api.football-data.org";
 
+function buildCacheHeaders(path, ok) {
+  if (!ok) {
+    return {
+      "Cache-Control": "no-store",
+    };
+  }
+
+  const normalizedPath = `/${String(path ?? "").replace(/^\/+/, "")}`;
+  const isMatchFeed = /\/matches(?:\/|$|\?)/u.test(normalizedPath);
+
+  if (isMatchFeed) {
+    return {
+      "Cache-Control": "public, max-age=15, must-revalidate",
+      "CDN-Cache-Control": "public, max-age=30, stale-while-revalidate=120",
+      "Netlify-CDN-Cache-Control": "public, max-age=60, stale-while-revalidate=180",
+    };
+  }
+
+  return {
+    "Cache-Control": "public, max-age=60, must-revalidate",
+    "CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+    "Netlify-CDN-Cache-Control":
+      "public, max-age=900, stale-while-revalidate=86400, durable",
+  };
+}
+
 function extractPath(event) {
   const directSplat = event.pathParameters?.splat;
   if (directSplat) {
@@ -66,16 +92,7 @@ export async function handler(event) {
 
     const body = await response.text();
 
-    const cacheHeaders = response.ok
-      ? {
-          "Cache-Control": "public, max-age=60, must-revalidate",
-          "CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
-          "Netlify-CDN-Cache-Control":
-            "public, max-age=900, stale-while-revalidate=86400, durable",
-        }
-      : {
-          "Cache-Control": "no-store",
-        };
+    const cacheHeaders = buildCacheHeaders(splat, response.ok);
 
     return {
       statusCode: response.status,

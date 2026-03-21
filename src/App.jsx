@@ -484,7 +484,9 @@ export default function App() {
     const controller = new AbortController();
     (async () => {
       try {
-        const matches = await getCompetitionMatches(competition.code, controller.signal);
+        const matches = await getCompetitionMatches(competition.code, controller.signal, {
+          preferFresh: true,
+        });
         setCompetitionMatchesByCode((current) => ({
           ...current,
           [competition.code]: matches,
@@ -509,7 +511,9 @@ export default function App() {
     const controller = new AbortController();
     (async () => {
       try {
-        const matches = await getCompetitionMatches("CL", controller.signal);
+        const matches = await getCompetitionMatches("CL", controller.signal, {
+          preferFresh: true,
+        });
         setCompetitionMatchesByCode((current) => ({
           ...current,
           CL: matches,
@@ -546,7 +550,9 @@ export default function App() {
       await Promise.all(
         missingCupCodes.map(async (code) => {
           try {
-            const matches = await getCompetitionMatches(code, controller.signal);
+            const matches = await getCompetitionMatches(code, controller.signal, {
+              preferFresh: true,
+            });
             setCompetitionMatchesByCode((current) => ({
               ...current,
               [code]: matches,
@@ -640,7 +646,9 @@ export default function App() {
           ...current,
           [selectedStanding.team.id]: "",
         }));
-        const matches = await getMatchesForTeam(selectedStanding.team.id, controller.signal);
+        const matches = await getMatchesForTeam(selectedStanding.team.id, controller.signal, {
+          preferFresh: true,
+        });
         setMatchesByTeamId((current) => ({ ...current, [selectedStanding.team.id]: matches }));
         setMatchesUpdatedAtByTeamId((current) => ({
           ...current,

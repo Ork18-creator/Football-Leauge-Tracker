@@ -1,5 +1,9 @@
 const API_BASE_URL = "/api/football-data/v4";
 const inFlightRequests = new Map();
+const MATCH_CACHE_MAX_AGE_MS = 60 * 1000;
+const STANDINGS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+const SCORERS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
+const TEAM_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 function readCache(key, maxAgeMs) {
   if (typeof window === "undefined") {
@@ -94,6 +98,25 @@ async function request(path, signal) {
   }
 }
 
+async function requestWithCacheFallback(path, cacheKey, signal, { maxAgeMs, preferFresh = false } = {}) {
+  const cached = preferFresh ? null : readCache(cacheKey, maxAgeMs);
+
+  if (cached) {
+    return { data: cached, fromStaleCache: false };
+  }
+
+  try {
+    const data = await request(path, signal);
+    return { data, fromStaleCache: false };
+  } catch (error) {
+    const stale = readStaleCache(cacheKey);
+    if (stale) {
+      return { data: stale, fromStaleCache: true };
+    }
+    throw error;
+  }
+}
+
 export function hasFootballApiToken() {
   return __HAS_FOOTBALL_API_TOKEN__;
 }
@@ -101,7 +124,7 @@ export function hasFootballApiToken() {
 export async function getCompetitionStandings(competitionCode, signal, season = null) {
   const seasonSuffix = season ? `-${season}` : "";
   const cacheKey = `football-data-standings-${competitionCode}${seasonSuffix}`;
-  const cached = readCache(cacheKey, 60 * 60 * 1000);
+  const cached = readCache(cacheKey, STANDINGS_CACHE_MAX_AGE_MS);
 
   if (cached) {
     return cached;
@@ -123,53 +146,44 @@ export async function getCompetitionStandings(competitionCode, signal, season = 
   }
 }
 
-export async function getMatchesForTeam(teamId, signal) {
+export async function getMatchesForTeam(teamId, signal, options = {}) {
   const cacheKey = `football-data-matches-v2-${teamId}`;
-  const cached = readCache(cacheKey, 60 * 60 * 1000);
+  const data = await requestWithCacheFallback(`/teams/${teamId}/matches?limit=500`, cacheKey, signal, {
+    maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
+    preferFresh: options.preferFresh,
+  });
+  const matches = data.data?.matches ?? data.data ?? [];
 
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const data = await request(`/teams/${teamId}/matches?limit=500`, signal);
-    const matches = data.matches ?? [];
+  if (!data.fromStaleCache) {
     writeCache(cacheKey, matches);
-    return matches;
-  } catch (error) {
-    const stale = readStaleCache(cacheKey);
-    if (stale) {
-      return stale;
-    }
-    throw error;
   }
+
+  return matches;
 }
 
-export async function getCompetitionMatches(competitionCode, signal) {
+export async function getCompetitionMatches(competitionCode, signal, options = {}) {
   const cacheKey = `football-data-competition-matches-v2-${competitionCode}`;
-  const cached = readCache(cacheKey, 60 * 60 * 1000);
+  const data = await requestWithCacheFallback(
+    `/competitions/${competitionCode}/matches?limit=380`,
+    cacheKey,
+    signal,
+    {
+      maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
+      preferFresh: options.preferFresh,
+    },
+  );
+  const matches = data.data?.matches ?? data.data ?? [];
 
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const data = await request(`/competitions/${competitionCode}/matches?limit=380`, signal);
-    const matches = data.matches ?? [];
+  if (!data.fromStaleCache) {
     writeCache(cacheKey, matches);
-    return matches;
-  } catch (error) {
-    const stale = readStaleCache(cacheKey);
-    if (stale) {
-      return stale;
-    }
-    throw error;
   }
+
+  return matches;
 }
 
 export async function getCompetitionScorers(competitionCode, signal) {
   const cacheKey = `football-data-competition-scorers-${competitionCode}`;
-  const cached = readCache(cacheKey, 60 * 60 * 1000);
+  const cached = readCache(cacheKey, SCORERS_CACHE_MAX_AGE_MS);
 
   if (cached) {
     return cached;
@@ -191,7 +205,7 @@ export async function getCompetitionScorers(competitionCode, signal) {
 
 export async function getTeamDetails(teamId, signal) {
   const cacheKey = `football-data-team-${teamId}`;
-  const cached = readCache(cacheKey, 24 * 60 * 60 * 1000);
+  const cached = readCache(cacheKey, TEAM_CACHE_MAX_AGE_MS);
 
   if (cached) {
     return cached;
