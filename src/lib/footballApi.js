@@ -64,7 +64,8 @@ function writeCache(key, data) {
 }
 
 async function request(path, signal) {
-  const requestUrl = `/api/football-data/v4${path}`;
+  const normalizedPath = `v4${path}`.replace(/^\/+/, "");
+  const requestUrl = `/api/football-data?path=${encodeURIComponent(normalizedPath)}`;
 
   if (!signal && inFlightRequests.has(requestUrl)) {
     return inFlightRequests.get(requestUrl);

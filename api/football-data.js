@@ -1,8 +1,8 @@
 const API_ORIGIN = "https://api.football-data.org";
 
-function buildUpstreamUrl(pathSegments = [], query = {}) {
-  const joinedPath = Array.isArray(pathSegments) ? pathSegments.join("/") : String(pathSegments ?? "");
-  const url = new URL(joinedPath, `${API_ORIGIN}/`);
+function buildUpstreamUrl(rawPath = "", query = {}) {
+  const normalizedPath = String(rawPath ?? "").replace(/^\/+/, "");
+  const url = new URL(normalizedPath, `${API_ORIGIN}/`);
 
   for (const [key, value] of Object.entries(query)) {
     if (key === "path") {
