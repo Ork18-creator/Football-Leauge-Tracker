@@ -128,6 +128,7 @@ const bundesligaRecentWinners = [
   { season: "2022/23", club: "Bayern Munich" },
 ];
 const LIVE_MATCH_STATUSES = new Set(["IN_PLAY", "PAUSED", "LIVE", "SUSPENDED"]);
+const UPCOMING_GRACE_PERIOD_MS = 3 * 60 * 60 * 1000;
 
 export default function App() {
   const [selectedCompetitionCode, setSelectedCompetitionCode] = useState("PL");
@@ -168,6 +169,7 @@ export default function App() {
   const standingsError = standingsErrorByCompetition[competition.code] ?? "";
   const scorersError = scorersErrorByCompetition[competition.code] ?? "";
   const competitionScorers = scorersByCompetition[competition.code] ?? [];
+  const hasCurrentStandings = currentStandings.length > 0;
   const selectedLocalTeam = teams.find((team) => String(team.id) === String(selectedTeamId)) ?? null;
   const championsLeagueTeams = useMemo(
     () => buildActiveChampionsLeagueTeams(championsLeagueMatches, championsLeagueStandings),
@@ -241,7 +243,7 @@ export default function App() {
     .filter(
       (match) =>
         match.competition?.code === competition.code &&
-        !["FINISHED", "CANCELLED"].includes(match.status),
+        isUpcomingFixture(match),
     )
     .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate))
     .slice(0, competition.code === "CL" ? 1 : 5);
@@ -254,7 +256,7 @@ export default function App() {
     const upcomingByCompetition = [...faCupMatches, ...eflCupMatches]
       .filter(
         (match) =>
-          !["FINISHED", "CANCELLED"].includes(match.status) &&
+          isUpcomingFixture(match) &&
           (String(match.homeTeam?.id) === selectedTeamId ||
             String(match.awayTeam?.id) === selectedTeamId),
       )
@@ -273,7 +275,7 @@ export default function App() {
     return championsLeagueMatches
       .filter(
         (match) =>
-          !["FINISHED", "CANCELLED"].includes(match.status) &&
+          isUpcomingFixture(match) &&
           (String(match.homeTeam?.id) === selectedTeamId ||
             String(match.awayTeam?.id) === selectedTeamId),
       )
@@ -478,10 +480,11 @@ export default function App() {
   }, [apiReady, competition, standingsByCompetition]);
 
   useEffect(() => {
-    if (!apiReady || competitionMatchesByCode[competition.code]) {
+    if (!apiReady || !hasCurrentStandings || competitionMatchesByCode[competition.code]) {
       return undefined;
     }
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
     (async () => {
       try {
         const matches = await getCompetitionMatches(competition.code, controller.signal, {
@@ -501,14 +504,26 @@ export default function App() {
         }
       }
     })();
-    return () => controller.abort();
-  }, [apiReady, competition.code, competitionMatchesByCode]);
+    }, 150);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, competition.code, competitionMatchesByCode, hasCurrentStandings]);
 
   useEffect(() => {
-    if (!apiReady || competitionMatchesByCode.CL) {
+    if (
+      !apiReady ||
+      competitionMatchesByCode.CL ||
+      !(
+        competition.code === "CL" ||
+        (["PL", "PD", "SA", "BL1"].includes(competition.code) && hasCurrentStandings)
+      )
+    ) {
       return undefined;
     }
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
     (async () => {
       try {
         const matches = await getCompetitionMatches("CL", controller.signal, {
@@ -528,11 +543,15 @@ export default function App() {
         }
       }
     })();
-    return () => controller.abort();
-  }, [apiReady, competitionMatchesByCode]);
+    }, 650);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, competition.code, competitionMatchesByCode, hasCurrentStandings]);
 
   useEffect(() => {
-    if (!apiReady || competition.code !== "PL") {
+    if (!apiReady || competition.code !== "PL" || !hasCurrentStandings) {
       return undefined;
     }
 
@@ -545,6 +564,7 @@ export default function App() {
     }
 
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
 
     (async () => {
       await Promise.all(
@@ -570,14 +590,27 @@ export default function App() {
       );
     })();
 
-    return () => controller.abort();
-  }, [apiReady, competition.code, competitionMatchesByCode]);
+    }, 900);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, competition.code, competitionMatchesByCode, hasCurrentStandings]);
 
   useEffect(() => {
-    if (!apiReady || standingsByCompetition.CL) {
+    if (
+      !apiReady ||
+      standingsByCompetition.CL ||
+      !(
+        competition.code === "CL" ||
+        (["PL", "PD", "SA", "BL1"].includes(competition.code) && hasCurrentStandings)
+      )
+    ) {
       return undefined;
     }
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
     (async () => {
       try {
         const table = await getCompetitionStandings("CL", controller.signal);
@@ -588,14 +621,19 @@ export default function App() {
         }
       }
     })();
-    return () => controller.abort();
-  }, [apiReady, standingsByCompetition]);
+    }, 500);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, competition.code, hasCurrentStandings, standingsByCompetition]);
 
   useEffect(() => {
-    if (!apiReady || scorersByCompetition[competition.code]) {
+    if (!apiReady || !hasCurrentStandings || scorersByCompetition[competition.code]) {
       return undefined;
     }
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
     (async () => {
       try {
         setIsLoadingScorers(true);
@@ -626,8 +664,12 @@ export default function App() {
         setIsLoadingScorers(false);
       }
     })();
-    return () => controller.abort();
-  }, [apiReady, competition.code, competition.name, scorersByCompetition]);
+    }, 300);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, competition.code, competition.name, scorersByCompetition, hasCurrentStandings]);
 
   useEffect(() => {
     if (
@@ -2757,6 +2799,23 @@ function formatStatus(status) {
   if (status === "TIMED" || status === "SCHEDULED") return "Scheduled";
   if (status === "POSTPONED") return "Postponed";
   return status;
+}
+
+function isUpcomingFixture(match) {
+  if (!match || ["FINISHED", "CANCELLED"].includes(match.status)) {
+    return false;
+  }
+
+  if (LIVE_MATCH_STATUSES.has(match.status) || match.status === "POSTPONED") {
+    return true;
+  }
+
+  const kickoffTime = new Date(match.utcDate).getTime();
+  if (Number.isNaN(kickoffTime)) {
+    return true;
+  }
+
+  return kickoffTime + UPCOMING_GRACE_PERIOD_MS >= Date.now();
 }
 
 function formatLiveMatchTime(match) {

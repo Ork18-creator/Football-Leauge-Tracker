@@ -10,6 +10,7 @@
     "auto-push": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\auto-push.ps1"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

@@ -147,7 +147,7 @@ export async function getCompetitionStandings(competitionCode, signal, season = 
 }
 
 export async function getMatchesForTeam(teamId, signal, options = {}) {
-  const cacheKey = `football-data-matches-v2-${teamId}`;
+  const cacheKey = `football-data-matches-v3-${teamId}`;
   const data = await requestWithCacheFallback(`/teams/${teamId}/matches?limit=500`, cacheKey, signal, {
     maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
     preferFresh: options.preferFresh,
@@ -162,7 +162,7 @@ export async function getMatchesForTeam(teamId, signal, options = {}) {
 }
 
 export async function getCompetitionMatches(competitionCode, signal, options = {}) {
-  const cacheKey = `football-data-competition-matches-v2-${competitionCode}`;
+  const cacheKey = `football-data-competition-matches-v3-${competitionCode}`;
   const data = await requestWithCacheFallback(
     `/competitions/${competitionCode}/matches?limit=380`,
     cacheKey,

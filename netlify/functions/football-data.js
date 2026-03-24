@@ -1,30 +1,9 @@
-const API_ORIGIN = "https://api.football-data.org";
-
-function buildCacheHeaders(path, ok) {
-  if (!ok) {
-    return {
-      "Cache-Control": "no-store",
-    };
-  }
-
-  const normalizedPath = `/${String(path ?? "").replace(/^\/+/, "")}`;
-  const isMatchFeed = /\/matches(?:\/|$|\?)/u.test(normalizedPath);
-
-  if (isMatchFeed) {
-    return {
-      "Cache-Control": "public, max-age=15, must-revalidate",
-      "CDN-Cache-Control": "public, max-age=30, stale-while-revalidate=120",
-      "Netlify-CDN-Cache-Control": "public, max-age=60, stale-while-revalidate=180",
-    };
-  }
-
-  return {
-    "Cache-Control": "public, max-age=60, must-revalidate",
-    "CDN-Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
-    "Netlify-CDN-Cache-Control":
-      "public, max-age=900, stale-while-revalidate=86400, durable",
-  };
-}
+import {
+  buildSnapshotHeaders,
+  fetchAndStoreSnapshot,
+  getSnapshot,
+  isSnapshotFresh,
+} from "./_football-data-cache.js";
 
 function extractPath(event) {
   const directSplat = event.pathParameters?.splat;
@@ -48,21 +27,6 @@ function extractPath(event) {
   return "";
 }
 
-function buildUpstreamUrl(path, queryStringParameters) {
-  const cleanPath = Array.isArray(path) ? path.join("/") : path;
-  const url = new URL(cleanPath, `${API_ORIGIN}/`);
-
-  if (queryStringParameters) {
-    for (const [key, value] of Object.entries(queryStringParameters)) {
-      if (value !== undefined && value !== null && value !== "") {
-        url.searchParams.set(key, value);
-      }
-    }
-  }
-
-  return url.toString();
-}
-
 export async function handler(event) {
   const token =
     process.env.FOOTBALL_DATA_API_KEY ?? process.env.VITE_FOOTBALL_DATA_API_KEY ?? "";
@@ -81,28 +45,47 @@ export async function handler(event) {
   }
 
   const splat = extractPath(event);
-  const upstreamUrl = buildUpstreamUrl(splat, event.queryStringParameters);
+  const cachedSnapshot = await getSnapshot(splat, event.queryStringParameters);
+
+  if (cachedSnapshot && isSnapshotFresh(cachedSnapshot)) {
+    return {
+      statusCode: cachedSnapshot.statusCode,
+      headers: buildSnapshotHeaders(cachedSnapshot, "netlify-blob-cache"),
+      body: cachedSnapshot.body,
+    };
+  }
 
   try {
-    const response = await fetch(upstreamUrl, {
-      headers: {
-        "X-Auth-Token": token,
-      },
-    });
+    const snapshot = await fetchAndStoreSnapshot(splat, event.queryStringParameters, token);
 
-    const body = await response.text();
-
-    const cacheHeaders = buildCacheHeaders(splat, response.ok);
+    if (!snapshot.statusCode && cachedSnapshot) {
+      return {
+        statusCode: cachedSnapshot.statusCode,
+        headers: buildSnapshotHeaders(cachedSnapshot, "netlify-blob-stale"),
+        body: cachedSnapshot.body,
+      };
+    }
 
     return {
-      statusCode: response.status,
-      headers: {
-        "Content-Type": response.headers.get("content-type") ?? "application/json",
-        ...cacheHeaders,
-      },
-      body,
+      statusCode: snapshot.statusCode,
+      headers:
+        snapshot.statusCode >= 200 && snapshot.statusCode < 300
+          ? buildSnapshotHeaders(snapshot, "live-refresh")
+          : {
+              "Content-Type": snapshot.contentType ?? "application/json",
+              "Cache-Control": "no-store",
+            },
+      body: snapshot.body,
     };
   } catch (error) {
+    if (cachedSnapshot) {
+      return {
+        statusCode: cachedSnapshot.statusCode,
+        headers: buildSnapshotHeaders(cachedSnapshot, "netlify-blob-stale"),
+        body: cachedSnapshot.body,
+      };
+    }
+
     return {
       statusCode: 502,
       headers: {
