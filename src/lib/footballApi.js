@@ -4,25 +4,6 @@ const STANDINGS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const SCORERS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const TEAM_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-function isLocalDevHost() {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  return ["127.0.0.1", "localhost"].includes(window.location.hostname);
-}
-
-function buildRequestUrl(path) {
-  if (isLocalDevHost()) {
-    return `/api/football-data/v4${path}`;
-  }
-
-  const parsed = new URL(path, "https://football-data.local");
-  const params = new URLSearchParams(parsed.search);
-  params.set("path", `v4${parsed.pathname}`);
-  return `/.netlify/functions/football-data?${params.toString()}`;
-}
-
 function readCache(key, maxAgeMs) {
   if (typeof window === "undefined") {
     return null;
@@ -83,7 +64,7 @@ function writeCache(key, data) {
 }
 
 async function request(path, signal) {
-  const requestUrl = buildRequestUrl(path);
+  const requestUrl = `/api/football-data/v4${path}`;
 
   if (!signal && inFlightRequests.has(requestUrl)) {
     return inFlightRequests.get(requestUrl);
