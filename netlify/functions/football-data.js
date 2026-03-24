@@ -6,6 +6,11 @@ import {
 } from "./_football-data-cache.js";
 
 function extractPath(event) {
+  const queryPath = event.queryStringParameters?.path;
+  if (queryPath) {
+    return queryPath;
+  }
+
   const directSplat = event.pathParameters?.splat;
   if (directSplat) {
     return directSplat;

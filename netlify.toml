@@ -5,6 +5,6 @@
 
 [[redirects]]
   from = "/api/football-data/*"
-  to = "/.netlify/functions/football-data/:splat"
+  to = "/.netlify/functions/football-data?path=:splat"
   status = 200
-
+  force = true
