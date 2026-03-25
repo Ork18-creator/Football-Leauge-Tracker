@@ -20,6 +20,10 @@
       "dest": "/api/football-data.js"
     },
     {
+      "src": "/api/football-data.js",
+      "dest": "/api/football-data.js"
+    },
+    {
       "handle": "filesystem"
     },
     {
