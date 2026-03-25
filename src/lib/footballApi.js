@@ -3,6 +3,9 @@ const MATCH_CACHE_MAX_AGE_MS = 60 * 1000;
 const STANDINGS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const SCORERS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const TEAM_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+const API_BASE_URL =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_FOOTBALL_PROXY_BASE_URL?.trim()) ||
+  "/api/football-data";
 
 function readCache(key, maxAgeMs) {
   if (typeof window === "undefined") {
@@ -65,7 +68,9 @@ function writeCache(key, data) {
 
 async function request(path, signal) {
   const normalizedPath = `v4${path}`.replace(/^\/+/, "");
-  const requestUrl = `/api/football-data?path=${encodeURIComponent(normalizedPath)}`;
+  const baseUrl = API_BASE_URL.replace(/\/$/, "");
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  const requestUrl = `${baseUrl}${separator}path=${encodeURIComponent(normalizedPath)}`;
 
   if (!signal && inFlightRequests.has(requestUrl)) {
     return inFlightRequests.get(requestUrl);
