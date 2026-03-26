@@ -88,17 +88,23 @@ It focuses on:
 
 ## Data Source
 
-The live data layer is powered primarily by [football-data.org](https://www.football-data.org/documentation/api).
+The dashboard frontend is designed to work with a separate backend proxy/cache built on top of [football-data.org](https://www.football-data.org/documentation/api).
 
-The app uses that API for:
+Current production architecture:
 
-- competition standings
-- team fixtures and match history
-- team details
-- top scorers
-- competition match feeds
+- frontend app on Vercel
+- separate backend repo/project for football-data proxying
+- shared backend caching so users see the same snapshot instead of each browser hitting the upstream API
 
-Some cup fixtures currently use manual fallbacks where the active API plan does not provide reliable domestic cup coverage.
+The frontend expects:
+
+- `VITE_FOOTBALL_PROXY_BASE_URL`
+
+Example:
+
+`https://your-backend-domain.vercel.app/api/football-data`
+
+Some cup fixtures still use manual fallbacks where the active API plan does not provide reliable domestic cup coverage.
 
 ## Local Development
 
@@ -108,57 +114,51 @@ Some cup fixtures currently use manual fallbacks where the active API plan does 
 npm.cmd install
 ```
 
-2. Create a local environment file:
-
-```powershell
-FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
-```
-
-Save it in:
-
-```powershell
-.env.local
-```
-
-3. Start the app
+2. Start the app
 
 ```powershell
 npm.cmd run dev -- --host 127.0.0.1 --port 4174
 ```
 
-4. Open:
+3. Open:
 
 [http://127.0.0.1:4174](http://127.0.0.1:4174)
 
-## Netlify Deployment
-
-For Netlify, add this environment variable:
+Set your frontend backend URL in:
 
 ```powershell
-FOOTBALL_DATA_API_KEY=your_football_data_api_key_here
+.env.local
 ```
 
-This project includes:
+with:
 
-- [netlify.toml](/C:/Users/omkes/Downloads/Leauge%20football%20details/netlify.toml)
-- [netlify/functions/football-data.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/netlify/functions/football-data.js)
+```powershell
+VITE_FOOTBALL_PROXY_BASE_URL=https://your-backend-domain.vercel.app/api/football-data
+```
 
-Without that variable, the deployed app will show fallback messages instead of live data.
+## Deployment
+
+The production deployment is frontend-only:
+
+- Vercel hosts the dashboard UI
+- the separate backend handles football-data requests and caching
+- the frontend only needs `VITE_FOOTBALL_PROXY_BASE_URL`
 
 ## Project Structure
 
 - [src/App.jsx](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/App.jsx) - main UI and dashboard logic
-- [src/lib/footballApi.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/lib/footballApi.js) - API integration and caching
+- [src/lib/footballApi.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/lib/footballApi.js) - frontend data client for the backend proxy
 - [src/data/teams.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/data/teams.js) - local club metadata
 - [src/index.css](/C:/Users/omkes/Downloads/Leauge%20football%20details/src/index.css) - global styling and theme system
 - [vite.config.js](/C:/Users/omkes/Downloads/Leauge%20football%20details/vite.config.js) - Vite config
+- [backend repo](https://github.com/Ork18-creator/Football-backend) - separate backend project for proxying and caching
 
 ## Notes
 
 - `.env.local` is ignored by git and should never be committed
 - some recent-winner data is maintained manually
 - some domestic cup fixtures currently use verified public-source fallbacks
-- live API coverage depends on your football-data.org plan
+- proxy/cache coverage still depends on your football-data.org plan
 
 ## Roadmap
 

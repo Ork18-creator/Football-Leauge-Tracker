@@ -4,8 +4,6 @@ import {
   getCompetitionMatches,
   getCompetitionScorers,
   getCompetitionStandings,
-  getMatchesForTeam,
-  getTeamDetails,
   hasFootballApiToken,
 } from "./lib/footballApi";
 
@@ -138,18 +136,14 @@ export default function App() {
   const [standingsByCompetition, setStandingsByCompetition] = useState({});
   const [competitionMatchesByCode, setCompetitionMatchesByCode] = useState({});
   const [scorersByCompetition, setScorersByCompetition] = useState({});
-  const [matchesByTeamId, setMatchesByTeamId] = useState({});
-  const [teamDetailsById, setTeamDetailsById] = useState({});
   const [standingsUpdatedAtByCompetition, setStandingsUpdatedAtByCompetition] = useState({});
   const [competitionMatchesUpdatedAtByCode, setCompetitionMatchesUpdatedAtByCode] = useState({});
   const [scorersUpdatedAtByCompetition, setScorersUpdatedAtByCompetition] = useState({});
-  const [matchesUpdatedAtByTeamId, setMatchesUpdatedAtByTeamId] = useState({});
   const [standingsErrorByCompetition, setStandingsErrorByCompetition] = useState({});
-  const [matchesErrorByTeamId, setMatchesErrorByTeamId] = useState({});
   const [scorersErrorByCompetition, setScorersErrorByCompetition] = useState({});
   const [isLoadingStandings, setIsLoadingStandings] = useState(false);
-  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
   const [isLoadingScorers, setIsLoadingScorers] = useState(false);
+  const isLoadingMatches = false;
 
   const apiReady = hasFootballApiToken();
   const competition =
@@ -196,7 +190,7 @@ export default function App() {
     selectedTeamId,
     teams,
     selectedStanding,
-    teamDetailsById,
+    {},
   );
   const switchingTeam =
     teams.find((team) => String(team.id) === String(switchingTeamId)) ??
@@ -219,19 +213,9 @@ export default function App() {
   }, [competitionMatches, selectedStanding?.team?.id]);
   const selectedMatches = selectedCompetitionMatches.length
     ? selectedCompetitionMatches
-    : selectedStanding
-      ? matchesByTeamId[selectedStanding.team.id] ?? []
-      : [];
-  const matchesUpdatedAt = selectedCompetitionMatches.length
-    ? competitionMatchesUpdatedAt
-    : selectedStanding
-      ? matchesUpdatedAtByTeamId[selectedStanding.team.id] ?? null
-      : competitionMatchesUpdatedAt;
-  const matchesError = selectedStanding?.team?.id
-    ? matchesErrorByTeamId[selectedStanding.team.id] ?? ""
-    : "";
-  const hasSelectedMatchesFallback = selectedMatches.length > 0;
-  const visibleMatchesError = hasSelectedMatchesFallback ? "" : matchesError;
+    : [];
+  const matchesUpdatedAt = competitionMatchesUpdatedAt;
+  const visibleMatchesError = "";
   const recentMatches = selectedMatches
     .filter(
       (match) =>
@@ -487,9 +471,7 @@ export default function App() {
     const timer = window.setTimeout(() => {
     (async () => {
       try {
-        const matches = await getCompetitionMatches(competition.code, controller.signal, {
-          preferFresh: true,
-        });
+        const matches = await getCompetitionMatches(competition.code, controller.signal);
         setCompetitionMatchesByCode((current) => ({
           ...current,
           [competition.code]: matches,
@@ -526,9 +508,7 @@ export default function App() {
     const timer = window.setTimeout(() => {
     (async () => {
       try {
-        const matches = await getCompetitionMatches("CL", controller.signal, {
-          preferFresh: true,
-        });
+        const matches = await getCompetitionMatches("CL", controller.signal);
         setCompetitionMatchesByCode((current) => ({
           ...current,
           CL: matches,
@@ -570,9 +550,7 @@ export default function App() {
       await Promise.all(
         missingCupCodes.map(async (code) => {
           try {
-            const matches = await getCompetitionMatches(code, controller.signal, {
-              preferFresh: true,
-            });
+            const matches = await getCompetitionMatches(code, controller.signal);
             setCompetitionMatchesByCode((current) => ({
               ...current,
               [code]: matches,
@@ -672,67 +650,6 @@ export default function App() {
   }, [apiReady, competition.code, competition.name, scorersByCompetition, hasCurrentStandings]);
 
   useEffect(() => {
-    if (
-      !apiReady ||
-      !selectedStanding?.team?.id ||
-      matchesByTeamId[selectedStanding.team.id] ||
-      selectedCompetitionMatches.length > 0
-    ) {
-      return undefined;
-    }
-    const controller = new AbortController();
-    (async () => {
-      try {
-        setIsLoadingMatches(true);
-        setMatchesErrorByTeamId((current) => ({
-          ...current,
-          [selectedStanding.team.id]: "",
-        }));
-        const matches = await getMatchesForTeam(selectedStanding.team.id, controller.signal, {
-          preferFresh: true,
-        });
-        setMatchesByTeamId((current) => ({ ...current, [selectedStanding.team.id]: matches }));
-        setMatchesUpdatedAtByTeamId((current) => ({
-          ...current,
-          [selectedStanding.team.id]: Date.now(),
-        }));
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          setMatchesErrorByTeamId((current) => ({
-            ...current,
-            [selectedStanding.team.id]:
-              error.status === 429
-                ? "The live fixtures API is rate-limited right now. Please wait a moment and refresh."
-                : "Unable to load the club's live fixtures right now.",
-          }));
-        }
-      } finally {
-        setIsLoadingMatches(false);
-      }
-    })();
-    return () => controller.abort();
-  }, [apiReady, matchesByTeamId, selectedCompetitionMatches.length, selectedStanding?.team?.id]);
-
-
-  useEffect(() => {
-    if (!apiReady || !selectedStanding?.team?.id || teamDetailsById[selectedStanding.team.id]) {
-      return undefined;
-    }
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const team = await getTeamDetails(selectedStanding.team.id, controller.signal);
-        setTeamDetailsById((current) => ({ ...current, [selectedStanding.team.id]: team }));
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          return;
-        }
-      }
-    })();
-    return () => controller.abort();
-  }, [apiReady, selectedStanding?.team?.id, teamDetailsById]);
-
-  useEffect(() => {
     if (!isSwitchingClub) {
       return undefined;
     }
@@ -743,13 +660,11 @@ export default function App() {
       return undefined;
     }
 
-    const hasMatchesForSelection = selectedStanding?.team?.id
-      ? Boolean(matchesByTeamId[selectedStanding.team.id]) ||
-        selectedCompetitionMatches.length > 0 ||
-        Boolean(matchesError)
-      : false;
+    const hasSelectionData =
+      Boolean(selectedStanding) &&
+      (selectedCompetitionMatches.length > 0 || competitionMatches.length > 0 || !hasCurrentStandings);
 
-    if (!selectedStanding || isLoadingMatches || !hasMatchesForSelection) {
+    if (!hasSelectionData) {
       return undefined;
     }
 
@@ -759,15 +674,7 @@ export default function App() {
     }, 180);
 
     return () => window.clearTimeout(timer);
-  }, [
-    apiReady,
-    isLoadingMatches,
-    isSwitchingClub,
-    matchesByTeamId,
-    matchesError,
-    selectedCompetitionMatches.length,
-    selectedStanding,
-  ]);
+  }, [apiReady, competitionMatches.length, hasCurrentStandings, isSwitchingClub, selectedCompetitionMatches.length, selectedStanding]);
 
   return (
     <div className="app-shell min-h-screen bg-[#06131d] px-3 py-4 text-slate-100 sm:px-5 sm:py-5 lg:px-8">

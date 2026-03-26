@@ -3,9 +3,7 @@ const MATCH_CACHE_MAX_AGE_MS = 60 * 1000;
 const STANDINGS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const SCORERS_CACHE_MAX_AGE_MS = 15 * 60 * 1000;
 const TEAM_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
-const API_BASE_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_FOOTBALL_PROXY_BASE_URL?.trim()) ||
-  "/api/football-data";
+const PROXY_BASE_URL = (import.meta.env.VITE_FOOTBALL_PROXY_BASE_URL ?? "").replace(/\/+$/, "");
 
 function readCache(key, maxAgeMs) {
   if (typeof window === "undefined") {
@@ -66,23 +64,35 @@ function writeCache(key, data) {
   }
 }
 
-async function request(path, signal) {
-  const normalizedPath = `v4${path}`.replace(/^\/+/, "");
-  const baseUrl = API_BASE_URL.replace(/\/$/, "");
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  const requestUrl = `${baseUrl}${separator}path=${encodeURIComponent(normalizedPath)}`;
+function buildProxyUrl(path, query = {}) {
+  const url = new URL(PROXY_BASE_URL || "https://invalid.local");
+  url.searchParams.set("path", path.replace(/^\/+/, ""));
 
-  if (!signal && inFlightRequests.has(requestUrl)) {
-    return inFlightRequests.get(requestUrl);
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  return PROXY_BASE_URL ? url.toString() : "";
+}
+
+async function requestJson(url, signal) {
+  if (!url) {
+    const error = new Error("Missing football backend URL");
+    error.status = 500;
+    throw error;
+  }
+
+  if (!signal && inFlightRequests.has(url)) {
+    return inFlightRequests.get(url);
   }
 
   const promise = (async () => {
-    const response = await fetch(requestUrl, {
-      signal,
-    });
+    const response = await fetch(url, { signal });
 
     if (!response.ok) {
-      const error = new Error(`Football data request failed with ${response.status}`);
+      const error = new Error(`Football backend request failed with ${response.status}`);
       error.status = response.status;
       throw error;
     }
@@ -91,27 +101,27 @@ async function request(path, signal) {
   })();
 
   if (!signal) {
-    inFlightRequests.set(requestUrl, promise);
+    inFlightRequests.set(url, promise);
   }
 
   try {
     return await promise;
   } finally {
     if (!signal) {
-      inFlightRequests.delete(requestUrl);
+      inFlightRequests.delete(url);
     }
   }
 }
 
-async function requestWithCacheFallback(path, cacheKey, signal, { maxAgeMs, preferFresh = false } = {}) {
-  const cached = preferFresh ? null : readCache(cacheKey, maxAgeMs);
+async function requestWithCacheFallback(url, cacheKey, signal, { maxAgeMs } = {}) {
+  const cached = readCache(cacheKey, maxAgeMs);
 
   if (cached) {
     return { data: cached, fromStaleCache: false };
   }
 
   try {
-    const data = await request(path, signal);
+    const data = await requestJson(url, signal);
     return { data, fromStaleCache: false };
   } catch (error) {
     const stale = readStaleCache(cacheKey);
@@ -123,108 +133,76 @@ async function requestWithCacheFallback(path, cacheKey, signal, { maxAgeMs, pref
 }
 
 export function hasFootballApiToken() {
-  return __HAS_FOOTBALL_API_TOKEN__;
+  return Boolean(PROXY_BASE_URL);
 }
 
 export async function getCompetitionStandings(competitionCode, signal, season = null) {
   const seasonSuffix = season ? `-${season}` : "";
   const cacheKey = `football-data-standings-${competitionCode}${seasonSuffix}`;
-  const cached = readCache(cacheKey, STANDINGS_CACHE_MAX_AGE_MS);
-
-  if (cached) {
-    return cached;
-  }
-
-  const seasonQuery = season ? `?season=${season}` : "";
-  try {
-    const data = await request(`/competitions/${competitionCode}/standings${seasonQuery}`, signal);
-    const table =
-      data.standings?.find((standing) => standing.type === "TOTAL")?.table ?? [];
-    writeCache(cacheKey, table);
-    return table;
-  } catch (error) {
-    const stale = readStaleCache(cacheKey);
-    if (stale) {
-      return stale;
-    }
-    throw error;
-  }
-}
-
-export async function getMatchesForTeam(teamId, signal, options = {}) {
-  const cacheKey = `football-data-matches-v3-${teamId}`;
-  const data = await requestWithCacheFallback(`/teams/${teamId}/matches?limit=500`, cacheKey, signal, {
-    maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
-    preferFresh: options.preferFresh,
+  const url = buildProxyUrl(`v4/competitions/${competitionCode}/standings`, season ? { season } : {});
+  const result = await requestWithCacheFallback(url, cacheKey, signal, {
+    maxAgeMs: STANDINGS_CACHE_MAX_AGE_MS,
   });
-  const matches = data.data?.matches ?? data.data ?? [];
 
-  if (!data.fromStaleCache) {
-    writeCache(cacheKey, matches);
+  if (!result.fromStaleCache) {
+    writeCache(cacheKey, result.data);
   }
 
-  return matches;
+  return result.data?.standings?.[0]?.table ?? result.data?.standings ?? result.data ?? [];
 }
 
-export async function getCompetitionMatches(competitionCode, signal, options = {}) {
-  const cacheKey = `football-data-competition-matches-v3-${competitionCode}`;
-  const data = await requestWithCacheFallback(
-    `/competitions/${competitionCode}/matches?limit=380`,
-    cacheKey,
-    signal,
-    {
-      maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
-      preferFresh: options.preferFresh,
-    },
-  );
-  const matches = data.data?.matches ?? data.data ?? [];
+export async function getMatchesForTeam(teamId, signal) {
+  const cacheKey = `football-data-matches-v3-${teamId}`;
+  const url = buildProxyUrl(`v4/teams/${teamId}/matches`);
+  const result = await requestWithCacheFallback(url, cacheKey, signal, {
+    maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
+  });
 
-  if (!data.fromStaleCache) {
-    writeCache(cacheKey, matches);
+  if (!result.fromStaleCache) {
+    writeCache(cacheKey, result.data);
   }
 
-  return matches;
+  return result.data?.matches ?? result.data ?? [];
+}
+
+export async function getCompetitionMatches(competitionCode, signal) {
+  const cacheKey = `football-data-competition-matches-v3-${competitionCode}`;
+  const url = buildProxyUrl(`v4/competitions/${competitionCode}/matches`);
+  const result = await requestWithCacheFallback(url, cacheKey, signal, {
+    maxAgeMs: MATCH_CACHE_MAX_AGE_MS,
+  });
+
+  if (!result.fromStaleCache) {
+    writeCache(cacheKey, result.data);
+  }
+
+  return result.data?.matches ?? result.data ?? [];
 }
 
 export async function getCompetitionScorers(competitionCode, signal) {
   const cacheKey = `football-data-competition-scorers-${competitionCode}`;
-  const cached = readCache(cacheKey, SCORERS_CACHE_MAX_AGE_MS);
+  const url = buildProxyUrl(`v4/competitions/${competitionCode}/scorers`);
+  const result = await requestWithCacheFallback(url, cacheKey, signal, {
+    maxAgeMs: SCORERS_CACHE_MAX_AGE_MS,
+  });
 
-  if (cached) {
-    return cached;
+  if (!result.fromStaleCache) {
+    writeCache(cacheKey, result.data);
   }
 
-  try {
-    const data = await request(`/competitions/${competitionCode}/scorers?limit=10`, signal);
-    const scorers = data.scorers ?? [];
-    writeCache(cacheKey, scorers);
-    return scorers;
-  } catch (error) {
-    const stale = readStaleCache(cacheKey);
-    if (stale) {
-      return stale;
-    }
-    throw error;
-  }
+  return result.data?.scorers ?? result.data ?? [];
 }
 
 export async function getTeamDetails(teamId, signal) {
   const cacheKey = `football-data-team-${teamId}`;
-  const cached = readCache(cacheKey, TEAM_CACHE_MAX_AGE_MS);
+  const url = buildProxyUrl(`v4/teams/${teamId}`);
+  const result = await requestWithCacheFallback(url, cacheKey, signal, {
+    maxAgeMs: TEAM_CACHE_MAX_AGE_MS,
+  });
 
-  if (cached) {
-    return cached;
+  if (!result.fromStaleCache) {
+    writeCache(cacheKey, result.data);
   }
 
-  try {
-    const team = await request(`/teams/${teamId}`, signal);
-    writeCache(cacheKey, team);
-    return team;
-  } catch (error) {
-    const stale = readStaleCache(cacheKey);
-    if (stale) {
-      return stale;
-    }
-    throw error;
-  }
+  return result.data ?? null;
 }
