@@ -4,6 +4,7 @@ import {
   getCompetitionMatches,
   getCompetitionScorers,
   getCompetitionStandings,
+  getTeamDetails,
   hasFootballApiToken,
 } from "./lib/footballApi";
 
@@ -139,6 +140,7 @@ export default function App() {
   const [standingsUpdatedAtByCompetition, setStandingsUpdatedAtByCompetition] = useState({});
   const [competitionMatchesUpdatedAtByCode, setCompetitionMatchesUpdatedAtByCode] = useState({});
   const [scorersUpdatedAtByCompetition, setScorersUpdatedAtByCompetition] = useState({});
+  const [teamDetailsById, setTeamDetailsById] = useState({});
   const [standingsErrorByCompetition, setStandingsErrorByCompetition] = useState({});
   const [scorersErrorByCompetition, setScorersErrorByCompetition] = useState({});
   const [isLoadingStandings, setIsLoadingStandings] = useState(false);
@@ -190,7 +192,7 @@ export default function App() {
     selectedTeamId,
     teams,
     selectedStanding,
-    {},
+    teamDetailsById,
   );
   const switchingTeam =
     teams.find((team) => String(team.id) === String(switchingTeamId)) ??
@@ -605,6 +607,38 @@ export default function App() {
       window.clearTimeout(timer);
     };
   }, [apiReady, competition.code, hasCurrentStandings, standingsByCompetition]);
+
+  useEffect(() => {
+    if (!apiReady || !selectedStanding?.team?.id || teamDetailsById[selectedStanding.team.id]) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      (async () => {
+        try {
+          const details = await getTeamDetails(selectedStanding.team.id, controller.signal);
+          if (!details) {
+            return;
+          }
+
+          setTeamDetailsById((current) => ({
+            ...current,
+            [selectedStanding.team.id]: details,
+          }));
+        } catch (error) {
+          if (error.name !== "AbortError") {
+            return;
+          }
+        }
+      })();
+    }, 120);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [apiReady, selectedStanding?.team?.id, teamDetailsById]);
 
   useEffect(() => {
     if (!apiReady || !hasCurrentStandings || scorersByCompetition[competition.code]) {
@@ -1168,7 +1202,28 @@ function findStandingByName(standings, teamName) {
 }
 
 function buildSelectedTeam(selectedTeamId, localTeams, selectedStanding, teamDetailsById) {
-  const local = localTeams.find((team) => team.id === selectedTeamId) ?? null;
+  const standingNames = [
+    selectedStanding?.team?.name,
+    selectedStanding?.team?.shortName,
+    simplifyName(selectedStanding?.team?.name),
+    simplifyName(selectedStanding?.team?.shortName || ""),
+  ]
+    .filter(Boolean)
+    .map((name) => normalizeTeamKey(name));
+  const local =
+    localTeams.find((team) => team.id === selectedTeamId) ??
+    localTeams.find((team) =>
+      [
+        team.apiTeamName,
+        team.name,
+        simplifyName(team.apiTeamName),
+        simplifyName(team.name),
+      ]
+        .filter(Boolean)
+        .map((name) => normalizeTeamKey(name))
+        .some((name) => standingNames.includes(name)),
+    ) ??
+    null;
   const live = selectedStanding ? teamDetailsById[selectedStanding.team.id] : null;
   return {
     id: selectedTeamId,
